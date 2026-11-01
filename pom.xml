@@ -1,0 +1,371 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>kwee</groupId>
+  <artifactId>gnucashchartsNG</artifactId>
+  <version>${revision}</version>
+  <name>GnuCashChartsNG</name>
+  <description>GnuCashGraphsNG</description>
+  <packaging>jar</packaging>
+
+  <parent>
+	<groupId>kwee</groupId>
+	<artifactId>aggregator</artifactId>
+	<version>${revision}</version>
+	<relativePath>..\\pom.xml</relativePath>
+  </parent>
+  
+  <properties>
+    <com.druvu.druvu-acc-gnucash-xml.version>2.2.1</com.druvu.druvu-acc-gnucash-xml.version>
+    <org.knowm.xchart.xchart.version>4.0.4</org.knowm.xchart.xchart.version>
+  </properties>
+  
+  <dependencies>
+ 	<dependency>
+	  <groupId>kwee</groupId>
+	  <artifactId>library</artifactId>
+	  <version>${revision}</version>
+	</dependency>
+	
+    <dependency>
+      <groupId>com.druvu</groupId>
+      <artifactId>druvu-acc-gnucash-xml</artifactId>
+      <version>${com.druvu.druvu-acc-gnucash-xml.version}</version>
+    </dependency>
+	
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi</artifactId>
+      <version>${org-apache-poi-poi.version}</version> <!-- Replace with the latest version available -->
+    </dependency>
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi-ooxml</artifactId>
+      <version>${org-apache-poi-ooxml.version}</version> <!-- Replace with the latest version available -->
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.apache.pdfbox/pdfbox -->
+    <dependency>
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>${org-apache-pdfbox-pdfbox.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jsoup</groupId>
+      <artifactId>jsoup</artifactId>
+      <version>${org-jsoup-jsoup.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.itextpdf</groupId>
+      <artifactId>itextpdf</artifactId>
+      <version>${com-itextpdf-itextpdf.version}</version> <!-- Replace with the latest version available -->
+    </dependency>  
+	
+	<dependency>
+      <groupId>org.knowm.xchart</groupId>
+      <artifactId>xchart</artifactId>
+      <version>${org.knowm.xchart.xchart.version}</version>
+    </dependency>
+    <!--   
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-swing</artifactId>
+      <version>${javafx.version}</version>
+    </dependency>
+    -->  
+    <!-- https://mvnrepository.com/artifact/org.openjfx/javafx-graphics -->
+    <!--
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-fxml</artifactId>
+      <version>${javafx.version}</version>
+    </dependency>
+    -->
+    <!-- SLF4J API -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version> <!-- Use the latest version -->
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+      <version>${log4j-slf4j-impl.version}</version> <!-- Gebruik de nieuwste versie -->
+    </dependency>
+
+    <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>${ch-qos-logback.version}</version>  <!-- Gebruik de nieuwste versie -->
+    </dependency>
+  </dependencies>
+  
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>   
+
+    <plugins> 
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${maven-enforcer-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>enforce-maven-version</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                 <version>${maven.min.version}</version> <!-- Minimale Maven-versie vereist -->
+                </requireMavenVersion>
+              </rules>
+              <fail>true</fail> <!-- Stop de build bij niet-naleving -->
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+		<artifactId>maven-assembly-plugin</artifactId>
+   		<version>${maven-assembly-plugin.version}</version>      
+		<executions>
+          <execution>
+			<phase>package</phase>
+			<goals>
+			  <goal>single</goal>
+			</goals>
+          </execution>
+        </executions>
+		<configuration>
+          <archive>
+            <manifest>
+		      <addClasspath>true</addClasspath>
+		      <mainClass>kwee.gnucashcharts.main.Main</mainClass>
+		    </manifest>
+          </archive>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <finalName>gnucashcharts</finalName>
+        </configuration>
+      </plugin>
+      
+      <!-- Distribute tools v -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>${maven-resources-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>CopyToolsIng</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.basedir}\BuildTools</outputDirectory>
+              <resources>                                        
+                <resource>
+                  <directory>..\BuildTools</directory>
+                  <includes>
+                    <include>HelpChm.cmd</include>
+                    <include>innosetup.cmd</include>
+                  </includes>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+              <encoding>${project.build.sourceEncoding}</encoding>
+            </configuration>
+          </execution>     
+          <execution>
+            <id>CopyToolsIng2</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.basedir}</outputDirectory>
+              <resources>                                        
+                <resource>
+                  <directory>..\BuildTools</directory>
+                  <includes>
+                    <include>Library.iss</include>
+                    <include>keystore.jks</include>
+                 </includes>
+                  <filtering>false</filtering>
+                </resource>
+              </resources>
+              <encoding>${project.build.sourceEncoding}</encoding>
+            </configuration>
+          </execution>
+          
+      	  <!-- readme.md ^ -->
+	      <!-- Distribute readme.md v -->
+          <execution>
+            <id>readme-md</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+              <resources>                                        
+                <resource>
+                  <directory>.</directory>
+                  <includes>
+                    <include>readme.md</include>
+                    <include>*.PNG</include>
+                  </includes>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+              <encoding>${project.build.sourceEncoding}</encoding>
+            </configuration>
+          </execution>        
+        </executions>
+      </plugin>		
+
+	  <!-- LAUNCH4J create executable v -->      
+      <plugin>
+         <groupId>com.akathist.maven.plugins.launch4j</groupId>
+         <artifactId>launch4j-maven-plugin</artifactId>
+         <version>${launch4j-maven-plugin.version}</version>
+         <executions>
+           <execution>
+             <id>l4j-clui</id>
+             <phase>package</phase>
+             <goals>
+               <goal>launch4j</goal>
+             </goals>
+             <configuration>
+               <headerType>console</headerType>
+               <jar>${project.build.directory}/gnucashcharts-jar-with-dependencies.jar</jar>
+               <outfile>${project.build.directory}/gnucashcharts.exe</outfile>
+               <downloadUrl>${downloadUrl.jre}</downloadUrl>
+               <classPath>
+                 <mainClass>kwee.gnucashcharts.main.Main</mainClass>
+              </classPath>
+              <jre>
+	            <path>%java_home%</path>
+              </jre>
+              <versionInfo>
+                <fileVersion>${project.version}</fileVersion>
+                <txtFileVersion>${project.version}</txtFileVersion>
+                <fileDescription>${project.name}</fileDescription>
+                <copyright>${project.copyright.text}</copyright>
+                <productVersion>${project.version}</productVersion>
+                <txtProductVersion>${project.version}</txtProductVersion>
+                <productName>${project.name}</productName>
+                <internalName>GnuCashCharts</internalName>
+                <originalFilename>gnucashcharts.exe</originalFilename>
+                <companyName>${companyName}</companyName>
+              </versionInfo>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+	  <!-- LAUNCH4J ^ -->
+	  <!-- Sign executable v -->
+      <plugin>
+        <groupId>net.jsign</groupId>
+        <artifactId>jsign-maven-plugin</artifactId>
+        <version>${jsign-maven-plugin.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+            <configuration>
+              <file>${project.build.directory}/GnuCashCharts.exe</file>
+              <name>ING OFX Converter</name>
+              <url>https://github.com/RSHKwee/gnucashcharts</url>
+              <keystore>keystore.jks</keystore>
+              <alias>RSHK</alias>
+              <storepass>${keystore.password}</storepass>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+	  <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jarsigner-plugin</artifactId>
+        <version>${maven-jarsigner-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>sign</id>
+            <phase>package</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+            <configuration>
+              <file>${project.build.directory}/gnucashcharts-jar-with-dependencies.jar</file>
+			  <keystore>keystore.jks</keystore>
+              <alias>RSHK</alias>
+              <storepass>${keystore.password}</storepass>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>	  
+	  
+	  <!-- Sign executable ^ -->
+      <!-- Windows installers v -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>${exec-maven-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>innoSetup</id>
+            <phase>install</phase>
+           <goals>
+              <goal>exec</goal>
+            </goals>          
+            <configuration>
+              <executable>BuildTools\innosetup.cmd</executable>
+              <workingDirectory>...</workingDirectory>
+              <arguments>
+                <argument>gnucashcharts.iss</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>${maven-antrun-pluginversion}</version>
+        <executions>
+          <execution>
+            <phase>install</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+              <configuration>
+                <target>
+                  <delete dir="${project.basedir}\BuildTools"/>
+                  <delete file="${project.basedir}\Library.iss"/>   
+                  <delete file="${project.basedir}\keystore.jks"/>   
+                </target>
+              </configuration>
+           </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+  
+  <distributionManagement>
+    <!-- Upload to Github v-->
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/RSHKwee/gnucashcharts</url>
+    </repository>
+    <!-- Upload to Github ^-->
+  </distributionManagement>
+</project>
