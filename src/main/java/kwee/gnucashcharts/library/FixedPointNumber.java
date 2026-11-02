@@ -65,14 +65,16 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
 
     if (o instanceof BigDecimal) {
       /*
-       * //vvvvv fix for an issue with BigDecimal.compareTo // "-0.0" compared to
-       * "0.0" is NOT 0 if (this.value.abs().compareTo(MINUSZERO) == 0) this.value =
-       * MINUSZERO;
+       * //vvvvv fix for an issue with BigDecimal.compareTo // "-0.0" compared
+       * to "0.0" is NOT 0 if (this.value.abs().compareTo(MINUSZERO) == 0)
+       * this.value = MINUSZERO;
        * 
        */
       BigDecimal otherBigDecimal = (BigDecimal) o;/*
-                                                   * if (otherBigDecimal.abs().compareTo(MINUSZERO) == 0)
-                                                   * otherBigDecimal = MINUSZERO; //^^^^^^^^
+                                                   * if (otherBigDecimal.abs().
+                                                   * compareTo(MINUSZERO) == 0)
+                                                   * otherBigDecimal =
+                                                   * MINUSZERO; //^^^^^^^^
                                                    */
       return (otherBigDecimal).compareTo(value) == 0;
     }
@@ -96,14 +98,16 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
     return value.signum() != -1;
   }
 
-  public static FixedPointNumber max(final FixedPointNumber a, final FixedPointNumber b) {
+  public static FixedPointNumber max(final FixedPointNumber a,
+      final FixedPointNumber b) {
     if (a.getBigDecimal().compareTo(b.getBigDecimal()) == -1) {
       return b;
     }
     return a;
   }
 
-  public static FixedPointNumber min(final FixedPointNumber a, final FixedPointNumber b) {
+  public static FixedPointNumber min(final FixedPointNumber a,
+      final FixedPointNumber b) {
     if (a.getBigDecimal().compareTo(b.getBigDecimal()) == -1) {
       return a;
     }
@@ -189,8 +193,8 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
   }
 
   /**
-   * @param n the value to multiply this value with (this object will contain the
-   *          new value)
+   * @param n the value to multiply this value with (this object will contain
+   *          the new value)
    * @return this (we are mutable) for easy operation-chaining
    */
   public FixedPointNumber multiply(final FixedPointNumber n) {
@@ -198,8 +202,8 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
   }
 
   /**
-   * @param n the value to multiply this value with (this object will contain the
-   *          new value)
+   * @param n the value to multiply this value with (this object will contain
+   *          the new value)
    * @return this (we are mutable) for easy operation-chaining
    */
   @Override
@@ -209,8 +213,8 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
   }
 
   /**
-   * @param n the value to multiply this value with (this object will contain the
-   *          new value)
+   * @param n the value to multiply this value with (this object will contain
+   *          the new value)
    * @return this (we are mutable) for easy operation-chaining
    */
   public FixedPointNumber multiply(final int n) {
@@ -294,9 +298,18 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
    */
   public FixedPointNumber(final BigDecimal bd) {
     if (bd == null) {
-      throw new IllegalArgumentException("null BigDecimal given to create BigDecimal");
+      throw new IllegalArgumentException("null BigDecimal given");
     }
-    value = bd;
+    // Als bd een BigDecimalWrapper is, pak de onderliggende echte BigDecimal
+    if (bd instanceof BigDecimalWrapper) {
+      this.value = ((BigDecimalWrapper) bd).getBigDecimal();
+      // En als die ook weer een wrapper is, recursief:
+      while (this.value instanceof BigDecimalWrapper) {
+        this.value = ((BigDecimalWrapper) this.value).getBigDecimal();
+      }
+    } else {
+      this.value = bd;
+    }
   }
 
   /**
@@ -330,8 +343,9 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
         try {
           value = new BigDecimal(rightOfComma);
         } catch (NumberFormatException e) {
-          throw new NumberFormatException(
-              "'" + rightOfComma + "' cannot be parsed by Biginteger! input was \"" + gnucashString + "\"");
+          throw new NumberFormatException("'" + rightOfComma
+              + "' cannot be parsed by Biginteger! input was \"" + gnucashString
+              + "\"");
         }
 
       } else {
@@ -344,7 +358,8 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
           value = new BigDecimal(leftOfComma + '.' + rightOfComma);
         } catch (NumberFormatException e) {
           throw new NumberFormatException("'" + leftOfComma + '.' + rightOfComma
-              + "' cannot be parsed by Biginteger! input was \"" + gnucashString + "\"");
+              + "' cannot be parsed by Biginteger! input was \"" + gnucashString
+              + "\"");
         }
       }
 
@@ -397,7 +412,8 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
     }
 
     if (value == null) {
-      throw new IllegalArgumentException("value is null!!! give string='" + gnucashString + "'");
+      throw new IllegalArgumentException(
+          "value is null!!! give string='" + gnucashString + "'");
     }
 
   }

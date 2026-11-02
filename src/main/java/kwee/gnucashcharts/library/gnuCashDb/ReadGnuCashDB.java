@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 
 import com.druvu.acc.api.AccStore;
 import com.druvu.acc.api.entity.Amount;
+import com.druvu.acc.api.entity.CommodityId;
 import com.druvu.acc.api.entity.Account;
 import com.druvu.acc.api.entity.AccountType;
 import com.druvu.acc.api.service.AccountService;
@@ -270,21 +271,37 @@ public class ReadGnuCashDB {
     AccountService accountService = AccountService.create(store, account.id());
     totSaldo = new FixedPointNumber(accountService.balance(account.id()).value());
 
-    FixedPointNumber fAmount = new FixedPointNumber("1.0");
+    FixedPointNumber fAmount = new FixedPointNumber("0.0");
     FixedPointNumber fBalance = new FixedPointNumber(accountService.balance(account.id(), a_Date).value());
 
     // TODO
     // Stock convert number shares to amount
     AccountType atype = account.type();
     if (atype.equals(AccountType.STOCK) || atype.equals(AccountType.MUTUAL) ) {
-      FixedPointNumber cmdPrice = new FixedPointNumber(m_pricedb.getPrice(account.commodity().orElse(null).id(), a_Date));
+      CommodityId comid = account.commodity().orElse(CommodityId.EUR);
+      FixedPointNumber cmdPrice = new FixedPointNumber(m_pricedb.getPrice(comid.namespace(), comid.id(), a_Date));
+
       Amount lAmount = accountService.balance(account.id(), a_Date);
       fAmount = new FixedPointNumber(lAmount.value());
       fBalance = new FixedPointNumber(fAmount);
-      lOGGER.log(Level.INFO, " fBalance: " + fBalance + "| fAmount: " + fAmount);
-      fBalance = new FixedPointNumber(fBalance.multiply(cmdPrice)); 
-       lOGGER.log(Level.INFO, "Account currence ID: " + account.name() + "; "+ account.commodity() + "; amt: " + fAmount.toGnucashString() + "; Bal: " + fBalance.toGnucashString() + "; cmdprice: " + cmdPrice.toGnucashString());  
-      lOGGER.log(Level.INFO, " LAmount: " + lAmount);
+      lOGGER.log(Level.INFO, " fBalance: " + fBalance + "| fAmount: " + fAmount + "| cmdPrice: " + cmdPrice);
+      lOGGER.log(Level.INFO, "same object? " + (fAmount == fBalance));
+      lOGGER.log(Level.INFO, "fAmount hash: " + System.identityHashCode(fAmount)
+                          + " | fBalance hash: " + System.identityHashCode(fBalance));    lOGGER.log(Level.INFO, " LAmount: " + lAmount);
+      // Beter (immutable-stijl):
+      FixedPointNumber result = fBalance.copy();     // diepe kopie
+      result.multiply(cmdPrice);                     // muteert de kopie
+      fBalance = result;     
+            
+      lOGGER.log(Level.INFO, " Na multiply fBalance: " + fBalance + "| fAmount: " + fAmount);
+      lOGGER.log(Level.INFO, "same object? " + (fAmount == fBalance));
+      lOGGER.log(Level.INFO, "fAmount hash: " + System.identityHashCode(fAmount)
+                          + " | fBalance hash: " + System.identityHashCode(fBalance));    lOGGER.log(Level.INFO, " LAmount: " + lAmount);
+      lOGGER.log(Level.INFO, "Account currence ID: " + account.name() + "; "+ account.commodity() + "; amt: " + fAmount.toString() + "; Bal: " + fBalance.toString() + "; cmdprice: " + cmdPrice.toString());  
+      lOGGER.log(Level.INFO, "same object? " + (fAmount == fBalance));
+      lOGGER.log(Level.INFO, "fAmount hash: " + System.identityHashCode(fAmount)
+                          + " | fBalance hash: " + System.identityHashCode(fBalance));    lOGGER.log(Level.INFO, " LAmount: " + lAmount);
+      lOGGER.log(Level.INFO, "");
     }  
     return new Result(fAmount, fBalance);
   }

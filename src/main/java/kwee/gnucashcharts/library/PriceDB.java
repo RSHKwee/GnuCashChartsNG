@@ -105,49 +105,67 @@ public class PriceDB {
     return new FixedPointNumber("0");
   }
 
-  public FixedPointNumber getPrice(String a_CommoditieSpace, String a_Commodity, LocalDate a_CurDate, int depth) {
+  public FixedPointNumber getPrice(String a_CommoditieSpace, String a_Commodity,
+      LocalDate a_CurDate) {
+    if (b_PriceDBPresent) {
+      return getPrice(a_CommoditieSpace, a_Commodity, a_CurDate, 0);
+    }
+    return new FixedPointNumber("0");
+  }
+
+  public FixedPointNumber getPrice(String a_CommoditieSpace, String a_Commodity,
+      LocalDate a_CurDate, int depth) {
     Date latestDate = null;
     Amount latestQuote = null;
-    FixedPointNumber factor = new FixedPointNumber("1"); // factor is used if the quote is not to our base-currency
+    FixedPointNumber factor = new FixedPointNumber("1"); // factor is used if
+                                                         // the quote is not to
+                                                         // our base-currency
     final int maxRecursionDepth = 5;
 
     if (b_PriceDBPresent) {
       for (Price priceQuote : (List<Price>) priceDB) {
         try {
           if (priceQuote == null) {
-            lOGGER.log(Level.INFO, "gnucash-file contains null price-quotes" + " there may be a problem with JWSDP");
+            lOGGER.log(Level.INFO, "gnucash-file contains null price-quotes"
+                + " there may be a problem with JWSDP");
             continue;
           }
           if (priceQuote.currency() == null) {
-            lOGGER.log(Level.INFO,
-                "gnucash-file contains price-quotes" + " with no currency id='" + priceQuote.currency().id() + "'");
+            lOGGER.log(Level.INFO, "gnucash-file contains price-quotes"
+                + " with no currency id='" + priceQuote.currency().id() + "'");
             continue;
           }
           if (priceQuote.currency().id() == null) {
             lOGGER.log(Level.INFO,
-                "gnucash-file contains price-quotes" + " with no currency-id id='" + priceQuote.currency().id() + "'");
+                "gnucash-file contains price-quotes"
+                    + " with no currency-id id='" + priceQuote.currency().id()
+                    + "'");
             continue;
           }
           if (priceQuote.currency().namespace() == null) {
-            lOGGER.log(Level.INFO, "gnucash-file contains price-quotes" + " with no currency-namespace id='"
-                + priceQuote.currency().namespace() + "'");
+            lOGGER.log(Level.INFO,
+                "gnucash-file contains price-quotes"
+                    + " with no currency-namespace id='"
+                    + priceQuote.currency().namespace() + "'");
             continue;
           }
           if (priceQuote.time() == null) {
-            lOGGER.log(Level.INFO, "gnucash-file contains price-quotes" + " with no timestamp id='"
-                + priceQuote.time().format(PRICE_QUOTE_DATE_FORMAT) + "'");
+            lOGGER.log(Level.INFO,
+                "gnucash-file contains price-quotes" + " with no timestamp id='"
+                    + priceQuote.time().format(PRICE_QUOTE_DATE_FORMAT) + "'");
             continue;
           }
           if (priceQuote.value() == null) {
-            lOGGER.log(Level.INFO,
-                "gnucash-file contains price-quotes" + " with no value id='" + priceQuote.id() + "'");
+            lOGGER.log(Level.INFO, "gnucash-file contains price-quotes"
+                + " with no value id='" + priceQuote.id() + "'");
             continue;
           }
           /*
-           * if (priceQuote.getPriceCommodity().getCmdtySpace().equals("FUND") &&
-           * priceQuote.getPriceType() == null) {
-           * LOGGER.warn("gnucash-file contains FUND-price-quotes" + " with no type id='"
-           * + priceQuote.getPriceId().getValue() + "'"); continue; }
+           * if (priceQuote.getPriceCommodity().getCmdtySpace().equals("FUND")
+           * && priceQuote.getPriceType() == null) {
+           * LOGGER.warn("gnucash-file contains FUND-price-quotes" +
+           * " with no type id='" + priceQuote.getPriceId().getValue() + "'");
+           * continue; }
            */
           if (!a_CommoditieSpace.isBlank()) {
             if (!priceQuote.commodity().namespace().equals(a_CommoditieSpace)) {
@@ -158,75 +176,89 @@ public class PriceDB {
             continue;
           }
           /*
-           * if (priceQuote.getPriceCommodity().getCmdtySpace().equals("FUND") &&
-           * (priceQuote.getPriceType() == null ||
+           * if (priceQuote.getPriceCommodity().getCmdtySpace().equals("FUND")
+           * && (priceQuote.getPriceType() == null ||
            * !priceQuote.getPriceType().equals("last") )) {
            * LOGGER.warn("ignoring FUND-price-quote of unknown type '" +
            * priceQuote.getPriceType() + "' expecting 'last' "); continue; }
            */
-
+          /*     @formatter:off
           if (!priceQuote.currency().namespace().equals("ISO4217")) {
             if (depth > maxRecursionDepth) {
-              lOGGER.log(Level.INFO, "ignoring price-quote that is not in an" + " ISO4217 -currency but in '"
-                  + priceQuote.currency().id());
+              lOGGER.log(Level.INFO, "ignoring price-quote that is not in an"
+                  + " ISO4217 -currency but in '" + priceQuote.currency().id());
               continue;
             }
-            factor = getPrice(priceQuote.currency().namespace(), priceQuote.currency().id(), a_CurDate, depth + 1);
+            factor = getPrice(priceQuote.currency().namespace(),
+                priceQuote.currency().id(), a_CurDate, depth + 1);
           } else {
             if (!priceQuote.currency().equals(m_rootComId)) {
               if (depth > maxRecursionDepth) {
-                lOGGER.log(Level.INFO, "ignoring price-quote that is not in " + m_rootComId.id() + " " + "but in  '"
-                    + priceQuote.currency().id());
+                lOGGER.log(Level.INFO,
+                    "ignoring price-quote that is not in " + m_rootComId.id()
+                        + " " + "but in  '" + priceQuote.currency().id());
                 continue;
               }
-              factor = getPrice(priceQuote.commodity().namespace(), priceQuote.currency().id(), a_CurDate, depth + 1);
+              factor = getPrice(priceQuote.commodity().namespace(),
+                  priceQuote.currency().id(), a_CurDate, depth + 1);
             }
           }
-
-          Date date = Date.from(priceQuote.time().atZone(ZoneId.systemDefault()).toInstant());
+    @formatter:on        */
+          Date date = Date.from(
+              priceQuote.time().atZone(ZoneId.systemDefault()).toInstant());
           // Date date = PRICE_QUOTE_DATE_FORMAT.parse(pricedate);
           LocalDateTime ls_CurDate = a_CurDate.atTime(23, 59, 59, 999_999_99);
-          Date l_CurDate = Date.from(ls_CurDate.atZone(ZoneId.systemDefault()).toInstant());
+          Date l_CurDate = Date
+              .from(ls_CurDate.atZone(ZoneId.systemDefault()).toInstant());
 
           if (date.before(l_CurDate)) {
             if (latestDate == null || latestDate.before(date)) {
               latestDate = date;
               latestQuote = new Amount(priceQuote.value(), m_rootComId);
-              lOGGER.log(Level.FINE, "getLatestPrice(pCmdtySpace='" + a_CommoditieSpace + "', String pCmdtyId='"
-                  + a_Commodity + "') converted " + latestQuote + " <= " + priceQuote.value());
+              lOGGER.log(Level.FINE,
+                  "getLatestPrice(pCmdtySpace='" + a_CommoditieSpace
+                      + "', String pCmdtyId='" + a_Commodity + "') converted "
+                      + latestQuote + " <= " + priceQuote.value());
             }
           }
 
         } catch (NumberFormatException e) {
           lOGGER.log(Level.INFO,
-              "[NumberFormatException] Problem in " + getClass().getName() + ".getLatestPrice(pCmdtySpace='"
-                  + a_CommoditieSpace + "', String pCmdtyId='" + a_Commodity + "')! Ignoring a bad price-quote '"
-                  + priceQuote + "'",
+              "[NumberFormatException] Problem in " + getClass().getName()
+                  + ".getLatestPrice(pCmdtySpace='" + a_CommoditieSpace
+                  + "', String pCmdtyId='" + a_Commodity
+                  + "')! Ignoring a bad price-quote '" + priceQuote + "'",
               e);
           // } catch (ParseException e) {
-          // LOGGER.error("[ParseException] Problem in " + getClass().getName() +
+          // LOGGER.error("[ParseException] Problem in " + getClass().getName()
+          // +
           // ".getLatestPrice(pCmdtySpace='"
-          // + a_CommoditieSpace + "', String pCmdtyId='" + a_Commodity + "')! Ignoring a
+          // + a_CommoditieSpace + "', String pCmdtyId='" + a_Commodity + "')!
+          // Ignoring a
           // bad price-quote '"
           // + priceQuote + "'", e);
         } catch (NullPointerException e) {
           lOGGER.log(Level.INFO,
-              "[NullPointerException] Problem in " + getClass().getName() + ".getLatestPrice(pCmdtySpace='"
-                  + a_CommoditieSpace + "', String pCmdtyId='" + a_Commodity + "')! Ignoring a bad price-quote '"
-                  + priceQuote + "'",
+              "[NullPointerException] Problem in " + getClass().getName()
+                  + ".getLatestPrice(pCmdtySpace='" + a_CommoditieSpace
+                  + "', String pCmdtyId='" + a_Commodity
+                  + "')! Ignoring a bad price-quote '" + priceQuote + "'",
               e);
         } catch (ArithmeticException e) {
           lOGGER.log(Level.INFO,
-              "[ArithmeticException] Problem in " + getClass().getName() + ".getLatestPrice(pCmdtySpace='"
-                  + a_CommoditieSpace + "', String pCmdtyId='" + a_Commodity + "')! Ignoring a bad price-quote '"
-                  + priceQuote + "'",
+              "[ArithmeticException] Problem in " + getClass().getName()
+                  + ".getLatestPrice(pCmdtySpace='" + a_CommoditieSpace
+                  + "', String pCmdtyId='" + a_Commodity
+                  + "')! Ignoring a bad price-quote '" + priceQuote + "'",
               e);
         }
       }
     }
 
-    lOGGER.log(Level.FINE, getClass().getName() + ".getLatestPrice(pCmdtySpace='" + a_CommoditieSpace
-        + "', String pCmdtyId='" + a_Commodity + "')= " + latestQuote + " from " + latestDate);
+    lOGGER.log(Level.FINE,
+        getClass().getName() + ".getLatestPrice(pCmdtySpace='"
+            + a_CommoditieSpace + "', String pCmdtyId='" + a_Commodity + "')= "
+            + latestQuote + " from " + latestDate);
 
     if (latestQuote == null) {
       FixedPointNumber ll = new FixedPointNumber("0");
@@ -237,15 +269,18 @@ public class PriceDB {
       factor = new FixedPointNumber("1");
     }
     FixedPointNumber rVal = factor.multiply(latestQuote.value());
-    return rVal;
+    lOGGER.log(Level.INFO, "factor: " + factor + "| rVal: " + rVal
+        + "| latestQuote: " + latestQuote);
+
+    return new FixedPointNumber(rVal);
   }
 
-  public List<Price> getPrices(String a_Commoditie) {
+  public List<Price> getPrices(String a_CommodityId) {
     List<Price> l_Prices = new ArrayList<Price>();
     if (b_PriceDBPresent) {
       for (Iterator<Price> iter = priceDB.iterator(); iter.hasNext();) {
         Price price = iter.next();
-        if (price.commodity().id().equals(a_Commoditie)) {
+        if (price.commodity().id().equals(a_CommodityId)) {
           l_Prices.add(price);
         }
       }
