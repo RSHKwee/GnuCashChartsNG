@@ -286,27 +286,31 @@ public class ReadGnuCashDB {
       Amount lAmount = accountService.balance(account.id(), a_Date);
       fAmount = new FixedPointNumber(lAmount.value());
       fBalance = new FixedPointNumber(fAmount);
-      lOGGER.log(mLevelStockBal, " fBalance: " + fBalance + "| fAmount: " + fAmount + "| cmdPrice: " + cmdPrice);
-      lOGGER.log(mLevelStockBal, "same object? " + (fAmount == fBalance));
-      lOGGER.log(mLevelStockBal, "fAmount hash: " + System.identityHashCode(fAmount)
+      if (mLevelStockBal == Level.INFO) {
+        lOGGER.log(mLevelStockBal, " fBalance: " + fBalance + "| fAmount: " + fAmount + "| cmdPrice: " + cmdPrice);
+        lOGGER.log(mLevelStockBal, "same object? " + (fAmount == fBalance));
+        lOGGER.log(mLevelStockBal, "fAmount hash: " + System.identityHashCode(fAmount)
                           + " | fBalance hash: " + System.identityHashCode(fBalance));    
-      lOGGER.log(mLevelStockBal, " LAmount: " + lAmount);
+        lOGGER.log(mLevelStockBal, " LAmount: " + lAmount);
+      }
       // Beter (immutable-stijl):
       FixedPointNumber result = fBalance.copy();     // diepe kopie
       result.multiply(cmdPrice);                     // muteert de kopie
       fBalance = result;     
-            
-      lOGGER.log(mLevelStockBal, " Na multiply fBalance: " + fBalance + "| fAmount: " + fAmount);
-      lOGGER.log(mLevelStockBal, "same object? " + (fAmount == fBalance));
-      lOGGER.log(mLevelStockBal, "fAmount hash: " + System.identityHashCode(fAmount)
+      
+      if (mLevelStockBal == Level.INFO) {            
+        lOGGER.log(mLevelStockBal, " Na multiply fBalance: " + fBalance + "| fAmount: " + fAmount);
+        lOGGER.log(mLevelStockBal, "same object? " + (fAmount == fBalance));
+        lOGGER.log(mLevelStockBal, "fAmount hash: " + System.identityHashCode(fAmount)
                           + " | fBalance hash: " + System.identityHashCode(fBalance));    
-      lOGGER.log(mLevelStockBal, " LAmount: " + lAmount);
-      lOGGER.log(mLevelStockBal, "Account currence ID: " + account.name() + "; "+ account.commodity() + "; amt: " + fAmount.toString() + "; Bal: " + fBalance.toString() + "; cmdprice: " + cmdPrice.toString());  
-      lOGGER.log(mLevelStockBal, "same object? " + (fAmount == fBalance));
-      lOGGER.log(mLevelStockBal, "fAmount hash: " + System.identityHashCode(fAmount)
+        lOGGER.log(mLevelStockBal, " LAmount: " + lAmount);
+        lOGGER.log(mLevelStockBal, "Account currence ID: " + account.name() + "; "+ account.commodity() + "; amt: " + fAmount.toString() + "; Bal: " + fBalance.toString() + "; cmdprice: " + cmdPrice.toString());  
+        lOGGER.log(mLevelStockBal, "same object? " + (fAmount == fBalance));
+        lOGGER.log(mLevelStockBal, "fAmount hash: " + System.identityHashCode(fAmount)
                           + " | fBalance hash: " + System.identityHashCode(fBalance));    
-      lOGGER.log(mLevelStockBal, " LAmount: " + lAmount);
-      lOGGER.log(mLevelStockBal, "");
+        lOGGER.log(mLevelStockBal, " LAmount: " + lAmount);
+        lOGGER.log(mLevelStockBal, "");
+      }
     }  
     return new Result(fAmount, fBalance);
   }
