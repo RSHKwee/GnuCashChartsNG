@@ -8,7 +8,7 @@ import java.math.BigDecimal;
  * even if they have a different representation (unlike BigInteger). internal
  * format: "2/100" means "0.02"
  */
-public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
+public class FixedPointNumber {
 
   /**
    * Our FixedPointNumber.java.
@@ -25,7 +25,6 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
   /**
    * @see java.lang.Object#clone()
    */
-  @Override
   public Object clone() {
     FixedPointNumber fp2 = new FixedPointNumber(getBigDecimal());
     return fp2;
@@ -42,7 +41,6 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
   /**
    * @return a new FixedPointNumber that has the value of this one times -1.
    */
-  @Override
   public FixedPointNumber negate() {
     return new FixedPointNumber(value.negate());
   }
@@ -56,7 +54,6 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
   /**
    * @see java.lang.Object#equals(java.lang.Object)
    */
-  @Override
   public boolean equals(final Object o) {
     if (o instanceof FixedPointNumber) {
       FixedPointNumber n = (FixedPointNumber) o;
@@ -84,6 +81,14 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
     }
 
     return false;
+  }
+
+  public double doubleValue() {
+    return getBigDecimal().doubleValue();
+  }
+
+  public String toPlainString() {
+    return getBigDecimal().toPlainString();
   }
 
   /**
@@ -143,7 +148,6 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
    * @param n the value to subtract from this value
    * @return this (we are mutable) for easy operation-chaining
    */
-  @Override
   public FixedPointNumber subtract(final BigDecimal n) {
     value = value.subtract(n);
     return this;
@@ -178,7 +182,6 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
    * @param n the value to add
    * @return this (we are mutable) for easy operation-chaining
    */
-  @Override
   public FixedPointNumber add(final BigDecimal n) {
     value = value.add(n);
     return this;
@@ -187,7 +190,6 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
   /**
    * @return the value as a BigDecimal.
    */
-  @Override
   public BigDecimal getBigDecimal() {
     return value;
   }
@@ -206,7 +208,6 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
    *          the new value)
    * @return this (we are mutable) for easy operation-chaining
    */
-  @Override
   public FixedPointNumber multiply(final BigDecimal n) {
     value = value.multiply(n);
     return this;
@@ -279,18 +280,10 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
    */
   public FixedPointNumber(final long i) {
     value = new BigDecimal("" + i);
-
   }
 
-  /**
-   * internally converts the double to a String.
-   *
-   * @deprecated Try not to use floating-point numbers. This class is for EXACT
-   *             computation!
-   */
-  @Deprecated
-  public FixedPointNumber(final double d) throws NumberFormatException {
-    value = new BigDecimal(d);
+  public FixedPointNumber(FixedPointNumber rVal) {
+    value = new BigDecimal(rVal.toPlainString());
   }
 
   /**
@@ -300,16 +293,7 @@ public class FixedPointNumber extends BigDecimalWrapper implements Cloneable {
     if (bd == null) {
       throw new IllegalArgumentException("null BigDecimal given");
     }
-    // Als bd een BigDecimalWrapper is, pak de onderliggende echte BigDecimal
-    if (bd instanceof BigDecimalWrapper) {
-      this.value = ((BigDecimalWrapper) bd).getBigDecimal();
-      // En als die ook weer een wrapper is, recursief:
-      while (this.value instanceof BigDecimalWrapper) {
-        this.value = ((BigDecimalWrapper) this.value).getBigDecimal();
-      }
-    } else {
-      this.value = bd;
-    }
+    this.value = bd;
   }
 
   /**

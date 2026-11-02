@@ -32,6 +32,8 @@ public class PriceDB {
   private File myFile;
   private CommodityId m_rootComId;
 
+  private Level mLevelPrice = Level.FINE;
+
   // protected static final SimpleDateFormat PRICE_QUOTE_DATE_FORMAT = new
   // SimpleDateFormat(Const.STANDARD_DATE_FORMAT_BOOK);
   protected static final DateTimeFormatter PRICE_QUOTE_DATE_FORMAT = DateTimeFormatter
@@ -223,7 +225,7 @@ public class PriceDB {
           }
 
         } catch (NumberFormatException e) {
-          lOGGER.log(Level.INFO,
+          lOGGER.log(mLevelPrice,
               "[NumberFormatException] Problem in " + getClass().getName()
                   + ".getLatestPrice(pCmdtySpace='" + a_CommoditieSpace
                   + "', String pCmdtyId='" + a_Commodity
@@ -265,11 +267,8 @@ public class PriceDB {
       return ll;
     }
 
-    if (factor == null) {
-      factor = new FixedPointNumber("1");
-    }
     FixedPointNumber rVal = factor.multiply(latestQuote.value());
-    lOGGER.log(Level.INFO, "factor: " + factor + "| rVal: " + rVal
+    lOGGER.log(mLevelPrice, "factor: " + factor + "| rVal: " + rVal
         + "| latestQuote: " + latestQuote);
 
     return new FixedPointNumber(rVal);
