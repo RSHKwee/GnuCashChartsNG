@@ -1,1 +1,0 @@
-package kwee.gnucashcharts.library.html;

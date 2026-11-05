@@ -2,10 +2,13 @@ package kwee.gnucashcharts.library;
 
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 public class LocalDateAndAmount {
-  Map<LocalDate, Double> m_DateAmount = new TreeMap<LocalDate, Double>();
+  private Map<LocalDate, Double> m_DateAmount = new TreeMap<LocalDate, Double>();
+  private String l_delim = ";";
+  private String lstr = "";
 
   public LocalDateAndAmount() {
   }
@@ -26,4 +29,13 @@ public class LocalDateAndAmount {
     m_DateAmount.put(a_Date, a_Amount);
   }
 
+  public String print() {
+    lstr = "";
+    Set<LocalDate> lDateKeys = m_DateAmount.keySet();
+    lDateKeys.forEach(lDateKey -> {
+      lstr = l_delim + lDateKey.toString() + l_delim
+          + m_DateAmount.get(lDateKey);
+    });
+    return lstr;
+  }
 }

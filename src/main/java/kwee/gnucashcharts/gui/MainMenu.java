@@ -1,7 +1,7 @@
 package kwee.gnucashcharts.gui;
 
 /**
- * 
+ *
  */
 import java.awt.Desktop;
 import java.io.File;
@@ -48,6 +48,7 @@ import kwee.gnucashcharts.main.UserSetting;
 import kwee.library.ApplicationMessages;
 import kwee.library.ChmOpener;
 import kwee.library.JarInfo;
+import kwee.library.TxtBestand;
 import kwee.library.FX.AboutWindow;
 import kwee.library.FX.JavaFXLogHandler;
 import kwee.gnucashcharts.library.MessageConstants;
@@ -63,7 +64,8 @@ public class MainMenu extends Application {
   private static String c_reponame = "GNUCashCharts";
 
   public static UserSetting m_param = new UserSetting();
-  private final String[] c_levels = { "OFF", "SEVERE", "WARNING", "INFO", "CONFIG", "FINE", "FINER", "FINEST", "ALL" };
+  private final String[] c_levels = { "OFF", "SEVERE", "WARNING", "INFO",
+      "CONFIG", "FINE", "FINER", "FINEST", "ALL" };
 
   // Replace "path/to/help/file" with the actual path to your help file
   static final String m_HelpFile = "GNUCharts.chm";
@@ -109,7 +111,8 @@ public class MainMenu extends Application {
     lOGGER.log(Level.FINE, "m_param.get_Language: " + m_Language);
     bundle = ApplicationMessages.getInstance();
     bundle.changeLanguage(m_Language);
-    if ((m_Level == Level.FINE) || (m_Level == Level.FINER) || (m_Level == Level.FINEST)) {
+    if ((m_Level == Level.FINE) || (m_Level == Level.FINER)
+        || (m_Level == Level.FINEST)) {
       bundle.dumpBundle();
     }
     m_SetLibMessagesBundle.changeLanguage(m_Language);
@@ -136,11 +139,14 @@ public class MainMenu extends Application {
     FileChooser inpFileChooser = new FileChooser();
     ComboBox<String> comboTagBox = new ComboBox<>(
         FXCollections.observableArrayList("Option 1", "Option 2", "Option 3"));
-    Button buttonPiechart = new Button(bundle.getMessage(MessageConstants.C_OpenPieChart));
+    Button buttonPiechart = new Button(
+        bundle.getMessage(MessageConstants.C_OpenPieChart));
     TextField integerField = new TextField(Integer.toString(nrBars));
     DatePicker datePicker = new DatePicker();
-    Button buttonBarchart = new Button(bundle.getMessage(MessageConstants.C_OpenBarChart));
-    CheckBox checkDiff = new CheckBox(bundle.getMessage(MessageConstants.C_Difference));
+    Button buttonBarchart = new Button(
+        bundle.getMessage(MessageConstants.C_OpenBarChart));
+    CheckBox checkDiff = new CheckBox(
+        bundle.getMessage(MessageConstants.C_Difference));
 
     comboTagBox.setDisable(true);
     buttonPiechart.setDisable(true);
@@ -148,10 +154,13 @@ public class MainMenu extends Application {
     datePicker.setDisable(true);
     buttonBarchart.setDisable(true);
 
-    Label l_file = new Label(bundle.getMessage(MessageConstants.C_ChooseGnuCashFile));
-    Label l_tag = new Label(bundle.getMessage(MessageConstants.C_SelectSubject));
+    Label l_file = new Label(
+        bundle.getMessage(MessageConstants.C_ChooseGnuCashFile));
+    Label l_tag = new Label(
+        bundle.getMessage(MessageConstants.C_SelectSubject));
 
-    Button openFileButton = new Button(bundle.getMessage(MessageConstants.C_OpenFile));
+    Button openFileButton = new Button(
+        bundle.getMessage(MessageConstants.C_OpenFile));
     openFileButton.setOnAction(_ -> {
       File[] l_files = m_param.get_InputFiles();
       if (l_files != null) {
@@ -172,7 +181,8 @@ public class MainMenu extends Application {
           fileChooser.setInitialDirectory(dir);
         }
       }
-      List<File> selectedFiles = fileChooser.showOpenMultipleDialog(primaryStage);
+      List<File> selectedFiles = fileChooser
+          .showOpenMultipleDialog(primaryStage);
       if (selectedFiles != null && !selectedFiles.isEmpty()) {
         // Save the directory of the first selected file
         File firstFile = selectedFiles.get(0);
@@ -202,7 +212,8 @@ public class MainMenu extends Application {
 
         comboTagBox.setDisable(false);
         datePicker.setDisable(false);
-        l_tag.setText(bundle.getMessage(MessageConstants.C_SelectedSubject, ""));
+        l_tag
+            .setText(bundle.getMessage(MessageConstants.C_SelectedSubject, ""));
 
         File[] l_fileArr = m_SelectedFiles.toArray(new File[0]);
         m_param.set_InputFiles(l_fileArr);
@@ -213,7 +224,8 @@ public class MainMenu extends Application {
     comboTagBox.setOnAction(_ -> {
       String selectedOption = comboTagBox.getValue();
       if (selectedOption != null) {
-        lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_SelectedSubject, selectedOption));
+        lOGGER.log(Level.INFO, bundle
+            .getMessage(MessageConstants.C_SelectedSubject, selectedOption));
         m_tag = selectedOption;
         l_tag.setText(m_tag);
         m_param.set_Tag(m_tag);
@@ -231,10 +243,14 @@ public class MainMenu extends Application {
     PieChartWithLegend piwindow = new PieChartWithLegend();
     buttonPiechart.setOnAction(_ -> {
       m_pieData = m_pieSelect.getData(m_Date);
+
+      // TODO
+      TxtBestand.DumpBestand("PieDataNG.csv", m_pieData.print());
       piwindow.openPieChartWindow(m_pieData, m_tag, m_SubjColors, m_Date);
     });
 
-    Label nrBarsLabel = new Label(bundle.getMessage(MessageConstants.C_MonthLab));
+    Label nrBarsLabel = new Label(
+        bundle.getMessage(MessageConstants.C_MonthLab));
     integerField.focusedProperty().addListener((_, _, isNowFocused) -> {
       if (!isNowFocused) { // Wanneer de focus verloren gaat
         try {
@@ -242,18 +258,22 @@ public class MainMenu extends Application {
           nrBars = value;
           m_param.set_NrBars(nrBars);
           m_param.save();
-          lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_NrOfMonth, nrBars));
+          lOGGER.log(Level.INFO,
+              bundle.getMessage(MessageConstants.C_NrOfMonth, nrBars));
         } catch (NumberFormatException e) {
-          lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_InvInpInt));
+          lOGGER.log(Level.INFO,
+              bundle.getMessage(MessageConstants.C_InvInpInt));
         }
       }
     });
 
-    Label endDateLabel = new Label(bundle.getMessage(MessageConstants.C_DateLabel));
+    Label endDateLabel = new Label(
+        bundle.getMessage(MessageConstants.C_DateLabel));
     datePicker.setOnAction(_ -> {
       LocalDate selectedDate = datePicker.getValue();
       m_Date = selectedDate;
-      lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_SelectedDate, selectedDate));
+      lOGGER.log(Level.INFO,
+          bundle.getMessage(MessageConstants.C_SelectedDate, selectedDate));
     });
 
     checkDiff.setOnAction(_ -> {
@@ -267,14 +287,17 @@ public class MainMenu extends Application {
     });
 
     buttonBarchart.setOnAction(_ -> {
-      m_barwindow.openTabsWindow(m_tag, nrBars, m_Date, m_Diff); // Knop toevoeven
+      m_barwindow.openTabsWindow(m_tag, nrBars, m_Date, m_Diff); // Knop
+                                                                 // toevoeven
     });
 
     // Do the layout
     HBox openFileLayout = new HBox(openFileButton, l_file);
-    HBox selectOptionLayout = new HBox(endDateLabel, datePicker, comboTagBox, l_tag);
+    HBox selectOptionLayout = new HBox(endDateLabel, datePicker, comboTagBox,
+        l_tag);
     HBox buttonPiechartLayout = new HBox(buttonPiechart);
-    HBox buttonBarchartLayout = new HBox(nrBarsLabel, integerField, checkDiff, buttonBarchart);
+    HBox buttonBarchartLayout = new HBox(nrBarsLabel, integerField, checkDiff,
+        buttonBarchart);
 
     openFileLayout.setSpacing(10);
     selectOptionLayout.setSpacing(10);
@@ -296,7 +319,8 @@ public class MainMenu extends Application {
     HBox.setMargin(endDateLabel, new Insets(10, 10, 10, 10));
     HBox.setMargin(datePicker, new Insets(10, 10, 10, 10));
 
-    VBox layout = new VBox(openFileLayout, selectOptionLayout, buttonPiechartLayout, buttonBarchartLayout, logTextArea);
+    VBox layout = new VBox(openFileLayout, selectOptionLayout,
+        buttonPiechartLayout, buttonBarchartLayout, logTextArea);
 
     BorderPane root = new BorderPane();
     root.setTop(menubar);
@@ -304,10 +328,12 @@ public class MainMenu extends Application {
 
     Scene scene = new Scene(root, 700, 375);
     primaryStage.setScene(scene);
-    primaryStage.setTitle(bundle.getMessage(MessageConstants.C_Title, m_creationtime, c_CopyrightYear));
+    primaryStage.setTitle(bundle.getMessage(MessageConstants.C_Title,
+        m_creationtime, c_CopyrightYear));
     primaryStage.show();
 
-    lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_Title, m_creationtime, c_CopyrightYear));
+    lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_Title,
+        m_creationtime, c_CopyrightYear));
   }
 
   // Menubar
@@ -321,7 +347,8 @@ public class MainMenu extends Application {
     mnSettings.setDisable(false);
 
     // Loglevel:
-    Menu mntmLoglevel = new Menu(bundle.getMessage(MessageConstants.C_Loglevel));
+    Menu mntmLoglevel = new Menu(
+        bundle.getMessage(MessageConstants.C_Loglevel));
     ToggleGroup toggleGroup = new ToggleGroup();
     RadioMenuItem[] loglevelitems = new RadioMenuItem[c_levels.length];
 
@@ -382,7 +409,8 @@ public class MainMenu extends Application {
       File selectedDirectory = directoryChooser.showDialog(primaryStage);
 
       if (selectedDirectory != null) {
-        lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_LogFolder, selectedDirectory.getAbsolutePath()));
+        lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_LogFolder,
+            selectedDirectory.getAbsolutePath()));
         m_Logdir = selectedDirectory.getAbsolutePath() + "/";
         m_param.set_LogDir(m_Logdir);
         m_param.set_toDisk(true);
@@ -390,10 +418,12 @@ public class MainMenu extends Application {
         try {
           MyLogger.setup(m_Level, m_Logdir, m_toDisk);
         } catch (IOException es) {
-          lOGGER.log(Level.SEVERE, Class.class.getName() + ": " + es.toString());
+          lOGGER.log(Level.SEVERE,
+              Class.class.getName() + ": " + es.toString());
         }
       } else {
-        lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_NoDirectorySelected));
+        lOGGER.log(Level.INFO,
+            bundle.getMessage(MessageConstants.C_NoDirectorySelected));
       }
     });
     mnSettings.getItems().add(checkMenuItem);
@@ -418,16 +448,19 @@ public class MainMenu extends Application {
           lOGGER.log(Level.INFO, e1.getMessage());
         }
       } else {
-        lOGGER.log(Level.INFO, bundle.getMessage("HelpFileNotFound", helpFile.getAbsolutePath()));
+        lOGGER.log(Level.INFO,
+            bundle.getMessage("HelpFileNotFound", helpFile.getAbsolutePath()));
       }
     });
     questMenu.getItems().add(menuHelp);
 
     // About
-    MenuItem menuAbout = new MenuItem(bundle.getMessage(MessageConstants.C_About));
+    MenuItem menuAbout = new MenuItem(
+        bundle.getMessage(MessageConstants.C_About));
     menuAbout.setOnAction(_ -> {
       @SuppressWarnings("unused")
-      AboutWindow about = new AboutWindow(c_reponame, m_creationtime, c_CopyrightYear);
+      AboutWindow about = new AboutWindow(c_reponame, m_creationtime,
+          c_CopyrightYear);
     });
     questMenu.getItems().add(menuAbout);
 
@@ -438,7 +471,7 @@ public class MainMenu extends Application {
 
   /**
    * Restart GUI for Language change purpose...
-   * 
+   *
    * @param primaryStage Stage
    */
   private void restartGUI(Stage primaryStage) {
@@ -448,7 +481,7 @@ public class MainMenu extends Application {
 
   /**
    * Main entry point.
-   * 
+   *
    * @param args Arguments
    */
   public static void main(String[] args) {

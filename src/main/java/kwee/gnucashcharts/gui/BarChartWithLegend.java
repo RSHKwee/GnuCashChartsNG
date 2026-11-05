@@ -30,6 +30,7 @@ import kwee.gnucashcharts.library.gnuCashDb.SamengesteldeStaafData;
 
 import kwee.logger.MyLogger;
 import kwee.library.ApplicationMessages;
+import kwee.library.TxtBestand;
 
 public class BarChartWithLegend {
   private static final Logger lOGGER = MyLogger.getLogger();
@@ -55,34 +56,45 @@ public class BarChartWithLegend {
     m_barchart = new ActionGnuCshDbStackedBarChart(inpDBs);
   }
 
-  public void openTabsWindow(String tag, int a_NrBars, LocalDate a_Date, boolean a_Diff) {
-    SamengesteldeStaafData a_barData = m_barchart.getData(a_NrBars, a_Date, a_Diff);
+  public void openTabsWindow(String tag, int a_NrBars, LocalDate a_Date,
+      boolean a_Diff) {
+    SamengesteldeStaafData a_barData = m_barchart.getData(a_NrBars, a_Date,
+        a_Diff);
     m_BarChartDiagram = new StackedBarChartScene(a_barData, tag);
-    m_barchartable = new BarChartToTableScene(m_BarChartDiagram.getBarChart(), m_BarChartDiagram.getCombinedTotals());
+    m_barchartable = new BarChartToTableScene(m_BarChartDiagram.getBarChart(),
+        m_BarChartDiagram.getCombinedTotals());
+
+    // TODO
+    TxtBestand.DumpBestand("BarDataNG.csv", a_barData.print());
 
     // Layout
-    title = bundle.getMessage(MessageConstants.C_BarchartTable, tag, m_barchartable.get_StartPeriod(),
-        m_barchartable.get_EndPeriod());
+    title = bundle.getMessage(MessageConstants.C_BarchartTable, tag,
+        m_barchartable.get_StartPeriod(), m_barchartable.get_EndPeriod());
 
     TabPane tabPane = new TabPane();
     Tab tabDiagram = new Tab(bundle.getMessage(MessageConstants.C_Diagram));
     Tab tabTable = new Tab(bundle.getMessage(MessageConstants.C_Table));
-    Tab tabTransposedTable = new Tab(bundle.getMessage(MessageConstants.C_TableTransposed));
+    Tab tabTransposedTable = new Tab(
+        bundle.getMessage(MessageConstants.C_TableTransposed));
 
     // Set the main scene on the primaryStage
     Stage tabStage = new Stage();
     tabStage.setTitle(title);
 
     // Set the panes as the content of the tabs
-    VBox tabDiagramSave = new VBox(m_BarChartDiagram.getVBox(), saveDialog(tabStage, "BarChart_" + tag));
+    VBox tabDiagramSave = new VBox(m_BarChartDiagram.getVBox(),
+        saveDialog(tabStage, "BarChart_" + tag));
     tabDiagram.setContent(tabDiagramSave);
 
-    VBox tabTableSave = new VBox(m_barchartable.getVBox(), saveDialog(tabStage, "BarChart_" + tag));
+    VBox tabTableSave = new VBox(m_barchartable.getVBox(),
+        saveDialog(tabStage, "BarChart_" + tag));
     tabTable.setContent(tabTableSave);
 
     VBox tabTableTransposed = new VBox(m_barchartable.getVBoxTransposed());
-    VBox tabTableTransposedSave = new VBox(saveDialog(tabStage, "BarChart_" + tag), tabTableTransposed);
-    tabTableTransposed.prefHeightProperty().bind(tabTableTransposedSave.heightProperty());
+    VBox tabTableTransposedSave = new VBox(
+        saveDialog(tabStage, "BarChart_" + tag), tabTableTransposed);
+    tabTableTransposed.prefHeightProperty()
+        .bind(tabTableTransposedSave.heightProperty());
     VBox.setVgrow(tabTableTransposed, Priority.ALWAYS);
     tabTableTransposed.resize(1000, 500);
     tabTableTransposedSave.resize(1200, 500);
@@ -100,7 +112,8 @@ public class BarChartWithLegend {
     FileChooser fileChooser = new FileChooser();
     fileChooser.setTitle(bundle.getMessage(MessageConstants.C_SaveFile));
 
-    Button saveButton = new Button(bundle.getMessage(MessageConstants.C_PDFCreate));
+    Button saveButton = new Button(
+        bundle.getMessage(MessageConstants.C_PDFCreate));
     saveButton.setOnAction(_ -> {
       FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter(
           bundle.getMessage(MessageConstants.C_PDFFiles), "*.pdf");
@@ -117,7 +130,8 @@ public class BarChartWithLegend {
         CreatePdf l_Pdf = new CreatePdf(selectedFile.getAbsolutePath());
         try {
           l_Pdf.CreatePage(CreatePdf.c_PageSizeEnum.A2, title);
-          l_Pdf.addImageAndLegend(m_BarChartDiagram.getBarChartImage(), m_BarChartDiagram.getLegendImage());
+          l_Pdf.addImageAndLegend(m_BarChartDiagram.getBarChartImage(),
+              m_BarChartDiagram.getLegendImage());
           l_Pdf.addImageTable(m_barchartable.getTableViewImage());
         } catch (IOException e1) {
           lOGGER.log(Level.INFO, "PDF BarChartImage: " + e1.getMessage());
@@ -139,7 +153,8 @@ public class BarChartWithLegend {
         } catch (IOException e1) {
           lOGGER.log(Level.INFO, "PDF Save: " + e1.getMessage());
         }
-        lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_PDFGenerated, selectedFile.getAbsolutePath()));
+        lOGGER.log(Level.INFO, bundle.getMessage(
+            MessageConstants.C_PDFGenerated, selectedFile.getAbsolutePath()));
         MainMenu.m_param.set_Pdf_file(selectedFile);
         MainMenu.m_param.save();
 

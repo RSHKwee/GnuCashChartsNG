@@ -1,6 +1,7 @@
 package kwee.gnucashcharts.library;
 
 import java.text.NumberFormat;
+import java.util.Currency;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,11 +19,22 @@ public class FormatAmount {
     return formattedNumber;
   }
 
+  public static String formatAmountNoSymbol(double amt) {
+    Locale locale = ApplicationMessages.getInstance().getLocale();
+    NumberFormat nf = NumberFormat.getNumberInstance(locale);
+    nf.setMinimumFractionDigits(2);
+    nf.setMaximumFractionDigits(2);
+
+    String result = nf.format(amt); // Resultaat bevat geen valutateken
+    return result;
+  }
+
   public static double convertToDouble(String input) {
     lOGGER.log(Level.FINE, "input: " + input);
     input = input.trim();
     // Remove the Euro currency symbol and the thousand separator
-    String cleanedInput = input.replace("€", "").replace(".", "").replace(",", ".");
+    String cleanedInput = input.replace("€", "").replace(".", "").replace(",",
+        ".");
     lOGGER.log(Level.FINE, "cleanedInput: " + cleanedInput);
 
     try {
@@ -31,7 +43,8 @@ public class FormatAmount {
       return result;
     } catch (Exception e) {
       if (!cleanedInput.isBlank()) {
-        lOGGER.log(Level.FINE, "Error converting to double: " + e.getMessage() + " " + cleanedInput);
+        lOGGER.log(Level.FINE, "Error converting to double: " + e.getMessage()
+            + " " + cleanedInput);
       }
       return 0.0; // Return a default value or handle the error accordingly
     }

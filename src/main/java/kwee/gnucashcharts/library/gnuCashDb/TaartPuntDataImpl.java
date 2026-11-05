@@ -18,12 +18,12 @@ public class TaartPuntDataImpl implements TaartPuntData {
    *  2 String m_AccountName = ""; account.getDescription()
    *  3 double m_Amount = 0.0; account.getBalanceFormated()
    *  4 double m_Saldo = 0.0;
-   *  5 String m_Remark = ""; account.getUserDefinedAttribute("notes")    
+   *  5 String m_Remark = ""; account.getUserDefinedAttribute("notes")
    * @formatter:off
-   */ 
+   */
   // m_Tags : tag, {SliceName, SliceAmount}
   private Map<String, SortedMap<String, Double>> m_Tags = new TreeMap<String, SortedMap<String, Double>>();
-  
+
   public TaartPuntDataImpl() {
   }
 
@@ -31,6 +31,7 @@ public class TaartPuntDataImpl implements TaartPuntData {
     m_Tags = new TreeMap<String, SortedMap<String, Double>>(a_data.getm_Tags());
   }
 
+  @Override
   public Map<String, SortedMap<String, Double>> getm_Tags() {
     return m_Tags;
   }
@@ -60,7 +61,7 @@ public class TaartPuntDataImpl implements TaartPuntData {
                 } catch (Exception e) {
                   // Do nothing...
                 }
-                double lamt = FormatAmount.convertToDouble(l_Selems[3]);             
+                double lamt = FormatAmount.convertToDouble(l_Selems[3]);
                 amt = amt + lamt;
                 slices.put(slice, amt);
                 m_Tags.put(tag, slices);
@@ -69,7 +70,7 @@ public class TaartPuntDataImpl implements TaartPuntData {
           }
         }
       }
-    });  
+    });
   }
 
   @Override
@@ -96,7 +97,26 @@ public class TaartPuntDataImpl implements TaartPuntData {
   public ArrayList<String> getSubjects(String a_Tag) {
     Map<String, Double> l_Slices = m_Tags.get(a_Tag);
     Set<String> l_subjects = l_Slices.keySet();
-    ArrayList<String> la_subjects = new ArrayList<String>(l_subjects);    
+    ArrayList<String> la_subjects = new ArrayList<String>(l_subjects);
     return la_subjects;
+  }
+
+  ArrayList<String> lOutStr = new ArrayList<String>();
+  @Override
+  public ArrayList<String> print() {
+    String l_delim = ";";
+    Set<String> l_tags = getTags();
+    lOutStr.clear();;
+
+    l_tags.forEach(tag -> {
+      Map<String, Double> l_Slices = m_Tags.get(tag);
+      Set<String> l_subjects = l_Slices.keySet();
+      l_subjects.forEach(l_subject -> {
+        Double l_amnt = l_Slices.get(l_subject);
+        String str = tag + l_delim + l_subject + l_delim + FormatAmount.formatAmountNoSymbol(l_amnt);
+        lOutStr.add(str);
+      });
+    });
+    return lOutStr;
   }
 }

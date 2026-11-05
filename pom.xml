@@ -18,7 +18,7 @@
   
   <properties>
     <com.druvu.druvu-acc-gnucash-xml.version>2.2.1</com.druvu.druvu-acc-gnucash-xml.version>
-    <org.knowm.xchart.xchart.version>4.0.4</org.knowm.xchart.xchart.version>
+    <org.knowm.xchart.xchart.version>4.0.5-SNAPSHOT</org.knowm.xchart.xchart.version>
   </properties>
   
   <dependencies>

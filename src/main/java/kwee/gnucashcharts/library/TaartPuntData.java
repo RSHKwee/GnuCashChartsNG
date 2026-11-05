@@ -19,4 +19,6 @@ public interface TaartPuntData {
 
   void putPieSlices(String a_Tag, SortedMap<String, Double> a_Slice);
 
+  public ArrayList<String> print();
+
 }
