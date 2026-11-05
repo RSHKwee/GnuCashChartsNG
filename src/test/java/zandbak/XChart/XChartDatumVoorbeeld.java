@@ -1,4 +1,4 @@
-package zandbak;
+package zandbak.XChart;
 
 import org.knowm.xchart.SwingWrapper;
 import org.knowm.xchart.XYChart;

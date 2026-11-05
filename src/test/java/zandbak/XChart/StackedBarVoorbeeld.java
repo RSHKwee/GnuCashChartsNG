@@ -1,11 +1,11 @@
-package zandbak;
+package zandbak.XChart;
 
+import org.knowm.xchart.CategoryChart;
+import org.knowm.xchart.CategoryChartBuilder;
 import org.knowm.xchart.SwingWrapper;
-import org.knowm.xchart.XYChart;
-import org.knowm.xchart.XYChartBuilder;
-import org.knowm.xchart.XYSeries;
 import org.knowm.xchart.style.Styler;
-import org.knowm.xchart.style.markers.SeriesMarkers;
+
+import zandbak.XChart.CsvNaarXYChart.Rij;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -17,47 +17,59 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class CsvNaarXYChart {
-
-  // Record voor één rij uit de CSV
+public class StackedBarVoorbeeld {
   public record Rij(String tag, String onderwerp, LocalDate datum,
       double totaal) {
   }
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) {
     Path csvPad = Path.of("BarDataNG.csv");
     DateTimeFormatter datumFormatter = DateTimeFormatter
         .ofPattern("yyyy-MM-dd");
 
     // 1. CSV inlezen
-    List<Rij> rijen = leesCsv(csvPad, datumFormatter);
+    List<Rij> rijen;
+    try {
+      rijen = leesCsv(csvPad, datumFormatter);
 
-    // 2. Groepeer per Tag en sorteer op datum
-    Map<String, List<Rij>> perTag = rijen.stream()
-        .collect(Collectors.groupingBy(Rij::tag, LinkedHashMap::new,
-            Collectors.collectingAndThen(Collectors.toList(), list -> list
-                .stream().sorted(Comparator.comparing(Rij::datum)).toList())));
+      // 1. Verzamel alle unieke onderwerpen (X-as categorieën)
+      List<String> onderwerpen = rijen.stream().map(Rij::onderwerp).distinct()
+          .sorted().toList();
 
-    // 3. XYChart opbouwen
-    XYChart chart = new XYChartBuilder().width(800).height(600)
-        .title("Totaal per Tag over tijd").xAxisTitle("Datum")
-        .yAxisTitle("Totaal").build();
+      // 2. Groepeer per Tag en map naar totalen per onderwerp
+      Map<String, Map<String, Double>> totalenPerTag = rijen.stream()
+          .collect(Collectors.groupingBy(Rij::tag,
+              Collectors.toMap(Rij::onderwerp, Rij::totaal, Double::sum)));
 
-    chart.getStyler().setDatePattern("MMM yyyy");
-    chart.getStyler().setLegendPosition(Styler.LegendPosition.InsideNW);
+      // 3. Maak de CategoryChart
+      CategoryChart chart = new CategoryChartBuilder().width(800).height(600)
+          .title("Totaal per Onderwerp (gestapeld per Tag)")
+          .xAxisTitle("Onderwerp").yAxisTitle("Totaal").build();
 
-    // 4. Per Tag een serie toevoegen
-    for (Map.Entry<String, List<Rij>> entry : perTag.entrySet()) {
-      List<LocalDate> datums = entry.getValue().stream().map(Rij::datum)
-          .toList();
-      List<Double> totalen = entry.getValue().stream().map(Rij::totaal)
-          .toList();
+      // 4. BELANGRIJK: zet stacking aan
+      chart.getStyler().setStacked(true);
+      chart.getStyler().setLegendPosition(Styler.LegendPosition.InsideNW);
+      chart.getStyler().setPlotGridVerticalLinesVisible(false);
 
-      XYSeries series = chart.addSeries(entry.getKey(), datums, totalen);
-      series.setMarker(SeriesMarkers.CIRCLE);
+      // 5. Voeg per Tag een serie toe
+      for (Map.Entry<String, Map<String, Double>> entry : totalenPerTag
+          .entrySet()) {
+        String tag = entry.getKey();
+        Map<String, Double> waarden = entry.getValue();
+
+        // Zorg dat elke serie dezelfde volgorde van onderwerpen heeft
+        List<Number> yData = onderwerpen.stream()
+            .map(o -> waarden.getOrDefault(o, 0.0))
+            .collect(Collectors.toList());
+
+        chart.addSeries(tag, onderwerpen, yData);
+      }
+
+      new SwingWrapper<>(chart).displayChart();
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
     }
-
-    new SwingWrapper<>(chart).displayChart();
   }
 
   /**

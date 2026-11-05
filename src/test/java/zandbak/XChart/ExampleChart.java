@@ -1,4 +1,4 @@
-package zandbak;
+package zandbak.XChart;
 
 import org.knowm.xchart.XChartPanel;
 import org.knowm.xchart.internal.chartpart.Chart;

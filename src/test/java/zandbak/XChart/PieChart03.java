@@ -1,4 +1,4 @@
-package zandbak;
+package zandbak.XChart;
 
 import org.knowm.xchart.PieChart;
 import org.knowm.xchart.PieChartBuilder;

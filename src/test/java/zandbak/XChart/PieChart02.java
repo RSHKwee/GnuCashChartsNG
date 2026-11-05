@@ -1,4 +1,4 @@
-package zandbak;
+package zandbak.XChart;
 
 import java.awt.Color;
 import java.util.function.Function;

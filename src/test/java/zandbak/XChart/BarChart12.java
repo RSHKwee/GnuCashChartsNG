@@ -2,7 +2,7 @@
  * Copyright (c) 2024 Energía Plus. All rights reserved.
  */
 
-package zandbak;
+package zandbak.XChart;
 
 import java.awt.*;
 import java.util.ArrayList;

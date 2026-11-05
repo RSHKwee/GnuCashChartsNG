@@ -1,9 +1,9 @@
-package zandbak;
+package zandbak.XChart;
 
 import org.knowm.xchart.*;
 import org.knowm.xchart.style.Styler;
 
-import zandbak.CsvNaarXYChart.Rij;
+import zandbak.XChart.CsvNaarXYChart.Rij;
 
 import java.awt.Color;
 import java.io.BufferedReader;
@@ -106,8 +106,6 @@ public class StackedBarPerTag {
     sw.displayChart(); // eerst weergeven, paneel initialiseren
     sw.getXChartPanel().setToolTipsEnabled(true);
 
-    // Toon het venster
-    // new SwingWrapper<>(panel).displayChart();
     System.out.println();
   }
 
@@ -141,17 +139,21 @@ public class StackedBarPerTag {
         // Splits op puntkomma; -1 zodat lege laatste velden behouden blijven
         String[] velden = regel.split(";", -1);
         if (velden.length < 4) {
-          System.err.println("Ongeldige regel overgeslagen: " + regel);
-          continue;
+          if (regel.startsWith("#")) {
+            // Comments
+            continue;
+          } else {
+            System.err.println("Ongeldige regel overgeslagen: " + regel);
+            continue;
+          }
         }
 
         try {
           String tag = velden[0].trim();
           String onderwerp = velden[1].trim();
           LocalDate datum = LocalDate.parse(velden[2].trim(), datumFormatter);
+
           // Vervang eventueel komma door punt als decimaalteken
-//          double totaal = Double
-          // .parseDouble(velden[3].trim().replace(',', '.'));
           double totaal = parseBedrag(velden[3].trim());
           Date date = Date
               .from(datum.atStartOfDay(ZoneId.systemDefault()).toInstant());
