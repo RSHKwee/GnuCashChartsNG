@@ -5,13 +5,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -40,12 +36,8 @@ public class PieChartExample extends Application {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
+
     // 1. Bereid gegevens voor: elk Data-object is een cirkelsegment
-    // ObservableList<PieChart.Data> pieData =
-    // FXCollections.observableArrayList(
-    // new PieChart.Data("Grapefruit", 13), new PieChart.Data("Oranges", 25),
-    // new PieChart.Data("Plums", 10), new PieChart.Data("Pears", 22),
-    // new PieChart.Data("Apples", 30));
     ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList();
     rijen.forEach(rij -> {
       if (rij.tag.equalsIgnoreCase("RKVermogen")) {
@@ -56,17 +48,18 @@ public class PieChartExample extends Application {
 
     // 2. Maak het cirkeldiagram
     PieChart pieChart = new PieChart(pieData);
-    pieChart.setTitle("Imported Fruits");
 
     // Optionele instellingen
     pieChart.setLabelsVisible(true); // Toon labels
     pieChart.setLegendVisible(true); // Toon legenda
     pieChart.setClockwise(true); // Met de klok mee rangschikken
 
+    double total = pieData.stream().mapToDouble(PieChart.Data::getPieValue)
+        .sum();
+    pieChart.setTitle("Vermogen: " + total);
+
     for (PieChart.Data data : pieData) {
       // Bereken het percentage (optioneel)
-      double total = pieData.stream().mapToDouble(PieChart.Data::getPieValue)
-          .sum();
       double percent = (data.getPieValue() / total) * 100;
 
       // Maak de tooltip-tekst

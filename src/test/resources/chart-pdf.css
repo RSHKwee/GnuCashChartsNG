@@ -1,0 +1,43 @@
+/* chart-pdf.css */
+
+/* Witte achtergrond voor de PDF (default is lichtgrijs) */
+.chart {
+    -fx-background-color: white;
+    -fx-padding: 10;
+}
+
+/* Titel groter en donkerder */
+.chart-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #222222;
+}
+
+/* As-labels leesbaar op papier */
+.axis {
+    -fx-tick-label-fill: #333333;
+    -fx-font-size: 11px;
+}
+.axis-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #222222;
+}
+
+/* Legenda compacter */
+.chart-legend {
+    -fx-background-color: transparent;
+    -fx-font-size: 11px;
+}
+
+/* Stacked bar: iets dunnere rand zodat kleuren op papier niet dichtslippen */
+.chart-bar {
+    -fx-border-color: rgba(0, 0, 0, 0.15);
+    -fx-border-width: 0.5;
+}
+
+/* Tooltip-stijl (voor het scherm, niet in PDF zichtbaar) */
+.tooltip {
+    -fx-background-color: rgba(40, 40, 40, 0.95);
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+}
