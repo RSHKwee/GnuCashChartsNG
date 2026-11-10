@@ -104,6 +104,7 @@ public class MainMenu extends Application {
 
   // --- UI-velden die we in callbacks / bindings nodig hebben ---
   private Label m_statusLabel;
+  private Label m_fileLabel;
   private Button m_openFileButton;
   private Button m_cancelLoadButton;
   private ComboBox<String> m_comboTagBox;
@@ -169,8 +170,10 @@ public class MainMenu extends Application {
     datePicker.setDisable(true);
     m_buttonBarchart.setDisable(true);
 
-    m_statusLabel = new Label(
+    m_fileLabel = new Label(
         bundle.getMessage(MessageConstants.C_ChooseGnuCashFile));
+    m_statusLabel = new Label();
+
     Label l_tag = new Label(
         bundle.getMessage(MessageConstants.C_SelectSubject));
 
@@ -260,6 +263,7 @@ public class MainMenu extends Application {
       if (m_loadService.isRunning()) {
         m_loadService.cancel();
       }
+      m_statusLabel.textProperty().bind(m_loadService.messageProperty());
       m_loadService.restart();
     });
 
@@ -300,6 +304,7 @@ public class MainMenu extends Application {
       if (m_pieService.isRunning()) {
         return;
       }
+      m_statusLabel.textProperty().bind(m_loadService.messageProperty());
       m_pieService.restart();
     });
 
@@ -345,12 +350,13 @@ public class MainMenu extends Application {
       if (m_barService.isRunning()) {
         return;
       }
+      m_statusLabel.textProperty().bind(m_loadService.messageProperty());
       m_barService.restart();
     });
 
     // Layout
     HBox openFileLayout = new HBox(m_openFileButton, m_cancelLoadButton,
-        m_statusLabel);
+        m_fileLabel, m_statusLabel);
     HBox selectOptionLayout = new HBox(endDateLabel, datePicker, m_comboTagBox,
         l_tag);
     HBox buttonPiechartLayout = new HBox(m_buttonPiechart);
@@ -364,6 +370,7 @@ public class MainMenu extends Application {
 
     HBox.setMargin(m_openFileButton, new Insets(10, 10, 10, 10));
     HBox.setMargin(m_cancelLoadButton, new Insets(10, 10, 10, 10));
+    HBox.setMargin(m_fileLabel, new Insets(10, 10, 10, 10));
     HBox.setMargin(m_statusLabel, new Insets(10, 10, 10, 10));
     HBox.setMargin(m_comboTagBox, new Insets(10, 10, 10, 10));
     HBox.setMargin(l_tag, new Insets(10, 10, 10, 10));
@@ -428,7 +435,7 @@ public class MainMenu extends Application {
             }
 
             updateProgress(1, 1);
-            updateMessage("Done");
+            updateMessage("");
             return new LoadResult(db, pie, bar, data);
           }
         };
@@ -522,7 +529,7 @@ public class MainMenu extends Application {
         m_param.set_InputFiles(l_fileArr);
         m_param.save();
       }
-      m_statusLabel.setText(m_FileTagTxt);
+      m_fileLabel.setText(m_FileTagTxt);
 
       Set<String> tags = m_pieData.getTags();
       ObservableList<String> observableList = FXCollections
