@@ -38,38 +38,67 @@ public class BarChartWithLegend {
   private StackedBarChartScene m_BarChartDiagram;
   private BarChartToTableScene m_barchartable;
   private ApplicationMessages bundle = ApplicationMessages.getInstance();
-//  private MessageText m_Messages = new MessageText();
   ActionGnuCshDbStackedBarChart m_barchart;
 
+  // --- Tussenresultaat van prepareTabs() ---
+  private boolean m_prepared = false;
+  private String m_preparedTag;
+  private int m_preparedNrBars;
+  private LocalDate m_preparedDate;
+  private boolean m_preparedDiff;
+
   public BarChartWithLegend() {
-    // Initialize
     m_barchart = null;
   }
 
   public BarChartWithLegend(ReadGnuCashDB inpFile) {
-    // Initialize
     m_barchart = new ActionGnuCshDbStackedBarChart(inpFile);
   }
 
   public BarChartWithLegend(ReadGnuCashMultiDB inpDBs) {
-    // Initialize
     m_barchart = new ActionGnuCshDbStackedBarChart(inpDBs);
   }
 
-  public void openTabsWindow(String tag, int a_NrBars, LocalDate a_Date,
+  /**
+   * Zwaar werk: data ophalen, chart-objecten opbouwen, CSV dumpen. GEEN
+   * Stage/Scene/show(). Draait op een achtergrondthread.
+   */
+  public void prepareTabs(String tag, int a_NrBars, LocalDate a_Date,
       boolean a_Diff) {
+    // Data ophalen (traag)
     SamengesteldeStaafData a_barData = m_barchart.getData(a_NrBars, a_Date,
         a_Diff);
+
+    // Chart-objecten opbouwen (geen Scene, geen show)
     m_BarChartDiagram = new StackedBarChartScene(a_barData, tag);
     m_barchartable = new BarChartToTableScene(m_BarChartDiagram.getBarChart(),
         m_BarChartDiagram.getCombinedTotals());
 
-    // TODO
+    // CSV dump (I/O)
     TxtBestand.DumpBestand("BarDataNG.csv", a_barData.print());
 
-    // Layout
+    // Titel samenstellen (geen UI)
     title = bundle.getMessage(MessageConstants.C_BarchartTable, tag,
         m_barchartable.get_StartPeriod(), m_barchartable.get_EndPeriod());
+
+    // Onthoud de parameters voor het geval openTabsWindow() ze nodig heeft
+    m_preparedTag = tag;
+    m_preparedNrBars = a_NrBars;
+    m_preparedDate = a_Date;
+    m_preparedDiff = a_Diff;
+    m_prepared = true;
+  }
+
+  /**
+   * Alleen UI: tabs op een Stage tonen. Draait op de FX-thread.
+   */
+  public void openTabsWindow(String tag, int a_NrBars, LocalDate a_Date,
+      boolean a_Diff) {
+    // Vangnet: als prepareTabs() niet is aangeroepen, doe het alsnog
+    // (bv. bij bestaande code die openTabsWindow direct aanroept).
+    if (!m_prepared) {
+      prepareTabs(tag, a_NrBars, a_Date, a_Diff);
+    }
 
     TabPane tabPane = new TabPane();
     Tab tabDiagram = new Tab(bundle.getMessage(MessageConstants.C_Diagram));
@@ -77,22 +106,20 @@ public class BarChartWithLegend {
     Tab tabTransposedTable = new Tab(
         bundle.getMessage(MessageConstants.C_TableTransposed));
 
-    // Set the main scene on the primaryStage
     Stage tabStage = new Stage();
     tabStage.setTitle(title);
 
-    // Set the panes as the content of the tabs
     VBox tabDiagramSave = new VBox(m_BarChartDiagram.getVBox(),
-        saveDialog(tabStage, "BarChart_" + tag));
+        saveDialog(tabStage, "BarChart_" + m_preparedTag));
     tabDiagram.setContent(tabDiagramSave);
 
     VBox tabTableSave = new VBox(m_barchartable.getVBox(),
-        saveDialog(tabStage, "BarChart_" + tag));
+        saveDialog(tabStage, "BarChart_" + m_preparedTag));
     tabTable.setContent(tabTableSave);
 
     VBox tabTableTransposed = new VBox(m_barchartable.getVBoxTransposed());
     VBox tabTableTransposedSave = new VBox(
-        saveDialog(tabStage, "BarChart_" + tag), tabTableTransposed);
+        saveDialog(tabStage, "BarChart_" + m_preparedTag), tabTableTransposed);
     tabTableTransposed.prefHeightProperty()
         .bind(tabTableTransposedSave.heightProperty());
     VBox.setVgrow(tabTableTransposed, Priority.ALWAYS);
@@ -100,12 +127,14 @@ public class BarChartWithLegend {
     tabTableTransposedSave.resize(1200, 500);
     tabTransposedTable.setContent(tabTableTransposedSave);
 
-    // Create a Scene with the TabPane as the root
     tabPane.getTabs().addAll(tabDiagram, tabTable, tabTransposedTable);
     Scene mainScene = new Scene(tabPane, 1200, 500);
 
     tabStage.setScene(mainScene);
     tabStage.show();
+
+    // Na tonen resetten, zodat een volgende prepareTabs() weer nodig is
+    m_prepared = false;
   }
 
   private VBox saveDialog(Stage a_Stage, String a_Filename) {
@@ -124,7 +153,6 @@ public class BarChartWithLegend {
         String ldir = intFile.getParent();
         fileChooser.setInitialDirectory(new File(ldir));
       }
-      // Show save file dialog
       File selectedFile = fileChooser.showSaveDialog(a_Stage);
       if (selectedFile != null) {
         CreatePdf l_Pdf = new CreatePdf(selectedFile.getAbsolutePath());
@@ -157,7 +185,6 @@ public class BarChartWithLegend {
             MessageConstants.C_PDFGenerated, selectedFile.getAbsolutePath()));
         MainMenu.m_param.set_Pdf_file(selectedFile);
         MainMenu.m_param.save();
-
       }
     });
     VBox saveFileLayout = new VBox(saveButton);

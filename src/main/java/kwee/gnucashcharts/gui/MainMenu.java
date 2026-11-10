@@ -1,23 +1,26 @@
 package kwee.gnucashcharts.gui;
 
-/**
- *
- */
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.application.Application;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Service;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
@@ -25,8 +28,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.RadioMenuItem;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
@@ -66,17 +69,15 @@ public class MainMenu extends Application {
   private final String[] c_levels = { "OFF", "SEVERE", "WARNING", "INFO",
       "CONFIG", "FINE", "FINER", "FINEST", "ALL" };
 
-  // Replace "path/to/help/file" with the actual path to your help file
   static final String m_HelpFile = "GNUCharts.chm";
 
   private String m_Language = "en";
   private ApplicationMessages bundle = ApplicationMessages.getInstance();
 
-  private int c_NrBars = 24; // Months
+  private int c_NrBars = 24;
   private int nrBars = c_NrBars;
 
   private Level m_Level = Level.INFO;
-//  private Level m_Level = Level.FINE;
   private String m_Logdir = "c:\\";
   private boolean m_toDisk = false;
 
@@ -94,18 +95,37 @@ public class MainMenu extends Application {
   private ReadGnuCashMultiDB m_gnucashdbtables;
   private SetLibMessagesBundle m_SetLibMessagesBundle = new SetLibMessagesBundle();
 
+  // --- Services ---
+  private Service<LoadResult> m_loadService;
+  private Service<PieResult> m_pieService;
+  private Service<BarResult> m_barService;
+
+  private List<File> m_pendingFiles;
+
+  // --- UI-velden die we in callbacks / bindings nodig hebben ---
+  private Label m_statusLabel;
+  private Button m_openFileButton;
+  private Button m_cancelLoadButton;
+  private ComboBox<String> m_comboTagBox;
+  private Button m_buttonPiechart;
+  private Button m_buttonBarchart;
+  private TextField m_integerField;
+  private ProgressBar m_progressBar;
+  private PieChartWithLegend m_piwindow;
+
+  // Houdt bij of er een tag gekozen is (voor de bindings)
+  private final BooleanProperty m_tagSelected = new SimpleBooleanProperty(
+      false);
+
   @Override
   public void start(Stage primaryStage) {
-    // Redirect Out- and Error stream to Logger
     try {
       LoggerPrintOutStream.redirectOutStreamToLogger(lOGGER, Level.WARNING);
       LoggerPrintErrStream.redirectErrorStreamToLogger(lOGGER, Level.WARNING);
     } catch (Exception e) {
-
     }
-    // Defaults
-    nrBars = m_param.get_NrBars();
 
+    nrBars = m_param.get_NrBars();
     m_Language = m_param.get_Language();
     lOGGER.log(Level.FINE, "m_param.get_Language: " + m_Language);
     bundle = ApplicationMessages.getInstance();
@@ -119,60 +139,104 @@ public class MainMenu extends Application {
     m_Logdir = m_param.get_LogDir();
     m_toDisk = m_param.is_toDisk();
 
-    // Logger setup
     TextArea logTextArea = new TextArea();
     logTextArea.setFont(new Font("Arial", 12));
     try {
       MyLogger.setup(m_Level, m_Logdir, m_toDisk);
-
       JavaFXLogHandler fxLogHandler = new JavaFXLogHandler(logTextArea);
       lOGGER.addHandler(fxLogHandler);
     } catch (IOException e1) {
       lOGGER.log(Level.INFO, e1.getMessage());
     }
 
-    // Menubar
     MenuBar menubar = doTheMenuBar(primaryStage);
 
-    // Main Window
     FileChooser inpFileChooser = new FileChooser();
-    ComboBox<String> comboTagBox = new ComboBox<>(
+    m_comboTagBox = new ComboBox<>(
         FXCollections.observableArrayList("Option 1", "Option 2", "Option 3"));
-    Button buttonPiechart = new Button(
+    m_buttonPiechart = new Button(
         bundle.getMessage(MessageConstants.C_OpenPieChart));
-    TextField integerField = new TextField(Integer.toString(nrBars));
+    m_integerField = new TextField(Integer.toString(nrBars));
     DatePicker datePicker = new DatePicker();
-    Button buttonBarchart = new Button(
+    m_buttonBarchart = new Button(
         bundle.getMessage(MessageConstants.C_OpenBarChart));
     CheckBox checkDiff = new CheckBox(
         bundle.getMessage(MessageConstants.C_Difference));
 
-    comboTagBox.setDisable(true);
-    buttonPiechart.setDisable(true);
-    integerField.setDisable(true);
+    m_comboTagBox.setDisable(true);
+    m_buttonPiechart.setDisable(true);
+    m_integerField.setDisable(true);
     datePicker.setDisable(true);
-    buttonBarchart.setDisable(true);
+    m_buttonBarchart.setDisable(true);
 
-    Label l_file = new Label(
+    m_statusLabel = new Label(
         bundle.getMessage(MessageConstants.C_ChooseGnuCashFile));
     Label l_tag = new Label(
         bundle.getMessage(MessageConstants.C_SelectSubject));
 
-    Button openFileButton = new Button(
+    m_openFileButton = new Button(
         bundle.getMessage(MessageConstants.C_OpenFile));
-    openFileButton.setOnAction(_ -> {
-      File[] l_files = m_param.get_InputFiles();
-      if (l_files != null) {
-        if (m_param.get_InputFiles().length == 0) {
-          File[] intFiles = m_param.get_InputFiles();
-          String ldir = intFiles[0].getParent();
-          inpFileChooser.setInitialDirectory(new File(ldir));
+    m_cancelLoadButton = new Button("Cancel");
+
+    m_piwindow = new PieChartWithLegend();
+
+    m_progressBar = new ProgressBar();
+    m_progressBar.setMaxWidth(Double.MAX_VALUE);
+
+    // --- Services aanmaken ---
+    m_loadService = createLoadService();
+    m_pieService = createPieService();
+    m_barService = createBarService();
+
+    wireLoadServiceCallbacks(l_tag, datePicker);
+    wirePieServiceCallbacks();
+    wireBarServiceCallbacks();
+
+    // --- Bindings ---
+    // Open-knop uit als er iets draait
+    m_openFileButton.disableProperty().bind(m_loadService.runningProperty()
+        .or(m_pieService.runningProperty()).or(m_barService.runningProperty()));
+
+    // Cancel alleen aan als een load draait
+    m_cancelLoadButton.disableProperty()
+        .bind(m_loadService.runningProperty().or(m_pieService.runningProperty())
+            .or(m_barService.runningProperty()).not());
+
+    // Pie-knop: aan als tag gekozen EN niets draait
+    m_buttonPiechart.disableProperty()
+        .bind(m_tagSelected.not().or(m_pieService.runningProperty())
+            .or(m_barService.runningProperty())
+            .or(m_loadService.runningProperty()));
+
+    // Bar-knop: idem
+    m_buttonBarchart.disableProperty()
+        .bind(m_tagSelected.not().or(m_barService.runningProperty())
+            .or(m_pieService.runningProperty())
+            .or(m_loadService.runningProperty()));
+
+    // Voortgangsbalk volgt welke service dan ook draait
+    m_progressBar.progressProperty()
+        .bind(Bindings.when(m_loadService.runningProperty())
+            .then(m_loadService.progressProperty())
+            .otherwise(Bindings.when(m_pieService.runningProperty())
+                .then(m_pieService.progressProperty())
+                .otherwise(Bindings.when(m_barService.runningProperty())
+                    .then(m_barService.progressProperty()).otherwise(0.0))));
+
+    // --- Handlers ---
+    m_openFileButton.setOnAction(_ -> {
+      if (m_param.get_InputFiles() != null
+          && m_param.get_InputFiles().length > 0) {
+        String ldir = m_param.get_InputFiles()[0].getParent();
+        if (ldir != null) {
+          File d = new File(ldir);
+          if (d.exists() && d.isDirectory()) {
+            inpFileChooser.setInitialDirectory(d);
+          }
         }
       }
-      // File selectedFile = inpFileChooser.showOpenDialog(primaryStage);
       FileChooser fileChooser = new FileChooser();
       fileChooser.setTitle("Select Multiple Files");
-      // Set initial directory from preferences
       String lastDirectory = m_param.get_InitialDirectory();
       if (lastDirectory != null) {
         File dir = new File(lastDirectory);
@@ -182,46 +246,37 @@ public class MainMenu extends Application {
       }
       List<File> selectedFiles = fileChooser
           .showOpenMultipleDialog(primaryStage);
-      if (selectedFiles != null && !selectedFiles.isEmpty()) {
-        // Save the directory of the first selected file
-        File firstFile = selectedFiles.get(0);
-        File directory = firstFile.getParentFile();
-        if (directory != null && directory.exists()) {
-          m_param.set_InitialDirectory(directory.getAbsolutePath());
-        }
-        m_SelectedFiles = selectedFiles;
+      if (selectedFiles == null || selectedFiles.isEmpty()) {
+        return;
+      }
+      File firstFile = selectedFiles.get(0);
+      File directory = firstFile.getParentFile();
+      if (directory != null && directory.exists()) {
+        m_param.set_InitialDirectory(directory.getAbsolutePath());
+      }
+      m_SelectedFiles = selectedFiles;
+      m_pendingFiles = selectedFiles;
 
-        l_file.setText("Processing.....");
+      if (m_loadService.isRunning()) {
+        m_loadService.cancel();
+      }
+      m_loadService.restart();
+    });
 
-        m_gnucashdbtables = new ReadGnuCashMultiDB(m_SelectedFiles);
-        m_pieSelect = new ActionGnuCashDbPieChart(m_gnucashdbtables);
-        m_barwindow = new BarChartWithLegend(m_gnucashdbtables);
-        m_pieData = m_pieSelect.getData(m_Date);
-
-        m_FileTagTxt = "";
-        selectedFiles.forEach(ll_file -> {
-          m_FileTagTxt = m_FileTagTxt + " " + ll_file.getName();
-        });
-        l_file.setText(m_FileTagTxt);
-
-        Set<String> tags = m_pieData.getTags();
-        ObservableList<String> observableList;
-        observableList = FXCollections.observableArrayList(tags);
-        comboTagBox.setItems(observableList);
-
-        comboTagBox.setDisable(false);
-        datePicker.setDisable(false);
-        l_tag
-            .setText(bundle.getMessage(MessageConstants.C_SelectedSubject, ""));
-
-        File[] l_fileArr = m_SelectedFiles.toArray(new File[0]);
-        m_param.set_InputFiles(l_fileArr);
-        m_param.save();
+    m_cancelLoadButton.setOnAction(_ -> {
+      if (m_loadService.isRunning()) {
+        m_loadService.cancel();
+      }
+      if (m_pieService.isRunning()) {
+        m_pieService.cancel();
+      }
+      if (m_barService.isRunning()) {
+        m_barService.cancel();
       }
     });
 
-    comboTagBox.setOnAction(_ -> {
-      String selectedOption = comboTagBox.getValue();
+    m_comboTagBox.setOnAction(_ -> {
+      String selectedOption = m_comboTagBox.getValue();
       if (selectedOption != null) {
         lOGGER.log(Level.INFO, bundle
             .getMessage(MessageConstants.C_SelectedSubject, selectedOption));
@@ -230,30 +285,30 @@ public class MainMenu extends Application {
         m_param.set_Tag(m_tag);
         m_param.save();
 
-        buttonPiechart.setDisable(false);
-        integerField.setDisable(false);
-        buttonBarchart.setDisable(false);
+        // m_buttonPiechart / m_buttonBarchart NIET meer setDisable(false):
+        // die zijn gebonden aan m_tagSelected + runningProperty().
+        m_integerField.setDisable(false); // deze is niet gebonden
+        m_tagSelected.set(true); // activeert de pie/bar-knoppen
 
         ArrayList<String> l_Subjects = m_pieData.getSubjects(m_tag);
         m_SubjColors = new SubjectsColors(l_Subjects);
       }
     });
 
-    PieChartWithLegend piwindow = new PieChartWithLegend();
-    buttonPiechart.setOnAction(_ -> {
-      m_pieData = m_pieSelect.getData(m_Date);
-
-      // TODO
-      TxtBestand.DumpBestand("PieDataNG.csv", m_pieData.print());
-      piwindow.openPieChartWindow(m_pieData, m_tag, m_SubjColors, m_Date);
+    // --- Pie-knop ---
+    m_buttonPiechart.setOnAction(_ -> {
+      if (m_pieService.isRunning()) {
+        return;
+      }
+      m_pieService.restart();
     });
 
     Label nrBarsLabel = new Label(
         bundle.getMessage(MessageConstants.C_MonthLab));
-    integerField.focusedProperty().addListener((_, _, isNowFocused) -> {
-      if (!isNowFocused) { // Wanneer de focus verloren gaat
+    m_integerField.focusedProperty().addListener((_, _, isNowFocused) -> {
+      if (!isNowFocused) {
         try {
-          int value = Integer.parseInt(integerField.getText());
+          int value = Integer.parseInt(m_integerField.getText());
           nrBars = value;
           m_param.set_NrBars(nrBars);
           m_param.save();
@@ -285,47 +340,49 @@ public class MainMenu extends Application {
       }
     });
 
-    buttonBarchart.setOnAction(_ -> {
-      m_barwindow.openTabsWindow(m_tag, nrBars, m_Date, m_Diff); // Knop
-                                                                 // toevoeven
+    // --- Bar-knop ---
+    m_buttonBarchart.setOnAction(_ -> {
+      if (m_barService.isRunning()) {
+        return;
+      }
+      m_barService.restart();
     });
 
-    // Do the layout
-    HBox openFileLayout = new HBox(openFileButton, l_file);
-    HBox selectOptionLayout = new HBox(endDateLabel, datePicker, comboTagBox,
+    // Layout
+    HBox openFileLayout = new HBox(m_openFileButton, m_cancelLoadButton,
+        m_statusLabel);
+    HBox selectOptionLayout = new HBox(endDateLabel, datePicker, m_comboTagBox,
         l_tag);
-    HBox buttonPiechartLayout = new HBox(buttonPiechart);
-    HBox buttonBarchartLayout = new HBox(nrBarsLabel, integerField, checkDiff,
-        buttonBarchart);
+    HBox buttonPiechartLayout = new HBox(m_buttonPiechart);
+    HBox buttonBarchartLayout = new HBox(nrBarsLabel, m_integerField, checkDiff,
+        m_buttonBarchart);
 
     openFileLayout.setSpacing(10);
     selectOptionLayout.setSpacing(10);
     buttonPiechartLayout.setSpacing(10);
     buttonBarchartLayout.setSpacing(10);
 
-    HBox.setMargin(openFileButton, new Insets(10, 10, 10, 10));
-    HBox.setMargin(l_file, new Insets(10, 10, 10, 10));
-
-    HBox.setMargin(comboTagBox, new Insets(10, 10, 10, 10));
+    HBox.setMargin(m_openFileButton, new Insets(10, 10, 10, 10));
+    HBox.setMargin(m_cancelLoadButton, new Insets(10, 10, 10, 10));
+    HBox.setMargin(m_statusLabel, new Insets(10, 10, 10, 10));
+    HBox.setMargin(m_comboTagBox, new Insets(10, 10, 10, 10));
     HBox.setMargin(l_tag, new Insets(10, 10, 10, 10));
-
-    HBox.setMargin(buttonPiechart, new Insets(10, 10, 10, 10));
+    HBox.setMargin(m_buttonPiechart, new Insets(10, 10, 10, 10));
     HBox.setMargin(checkDiff, new Insets(10, 10, 10, 10));
-
-    HBox.setMargin(buttonBarchart, new Insets(10, 10, 10, 10));
+    HBox.setMargin(m_buttonBarchart, new Insets(10, 10, 10, 10));
     HBox.setMargin(nrBarsLabel, new Insets(10, 10, 10, 10));
-    HBox.setMargin(integerField, new Insets(10, 10, 10, 10));
+    HBox.setMargin(m_integerField, new Insets(10, 10, 10, 10));
     HBox.setMargin(endDateLabel, new Insets(10, 10, 10, 10));
     HBox.setMargin(datePicker, new Insets(10, 10, 10, 10));
 
     VBox layout = new VBox(openFileLayout, selectOptionLayout,
-        buttonPiechartLayout, buttonBarchartLayout, logTextArea);
+        buttonPiechartLayout, buttonBarchartLayout, m_progressBar, logTextArea);
 
     BorderPane root = new BorderPane();
     root.setTop(menubar);
     root.setCenter(layout);
 
-    Scene scene = new Scene(root, 700, 375);
+    Scene scene = new Scene(root, 700, 425);
     primaryStage.setScene(scene);
     primaryStage.setTitle(bundle.getMessage(MessageConstants.C_Title,
         m_creationtime, c_CopyrightYear));
@@ -335,17 +392,265 @@ public class MainMenu extends Application {
         m_creationtime, c_CopyrightYear));
   }
 
-  // Menubar
+  // ---------------- Services ----------------
+
+  private Service<LoadResult> createLoadService() {
+    return new Service<>() {
+      @Override
+      protected Task<LoadResult> createTask() {
+        final List<File> files = m_pendingFiles;
+        return new Task<>() {
+          @Override
+          protected LoadResult call() throws Exception {
+            updateMessage("Reading GnuCash DB...");
+            updateProgress(-1, 1);
+            ReadGnuCashMultiDB db = new ReadGnuCashMultiDB(files);
+            if (isCancelled()) {
+              return null;
+            }
+
+            updateMessage("Building pie chart model...");
+            ActionGnuCashDbPieChart pie = new ActionGnuCashDbPieChart(db);
+            if (isCancelled()) {
+              return null;
+            }
+
+            updateMessage("Building bar chart model...");
+            BarChartWithLegend bar = new BarChartWithLegend(db);
+            if (isCancelled()) {
+              return null;
+            }
+
+            updateMessage("Calculating data...");
+            TaartPuntData data = pie.getData(m_Date);
+            if (isCancelled()) {
+              return null;
+            }
+
+            updateProgress(1, 1);
+            updateMessage("Done");
+            return new LoadResult(db, pie, bar, data);
+          }
+        };
+      }
+    };
+  }
+
+  private Service<PieResult> createPieService() {
+    return new Service<>() {
+      @Override
+      protected Task<PieResult> createTask() {
+        final ActionGnuCashDbPieChart pie = m_pieSelect;
+        final LocalDate date = m_Date;
+        final String tag = m_tag;
+        final SubjectsColors colors = m_SubjColors;
+
+        return new Task<>() {
+          @Override
+          protected PieResult call() throws Exception {
+            updateMessage("Calculating pie data...");
+            updateProgress(-1, 1);
+
+            TaartPuntData data = pie.getData(date);
+            if (isCancelled()) {
+              return null;
+            }
+
+            updateMessage("Writing CSV...");
+            TxtBestand.DumpBestand("PieDataNG.csv", data.print());
+            if (isCancelled()) {
+              return null;
+            }
+
+            updateProgress(1, 1);
+            updateMessage("Done");
+            return new PieResult(data, tag, colors, date);
+          }
+        };
+      }
+    };
+  }
+
+  private Service<BarResult> createBarService() {
+    return new Service<>() {
+      @Override
+      protected Task<BarResult> createTask() {
+        final BarChartWithLegend bar = m_barwindow;
+        final String tag = m_tag;
+        final int bars = nrBars;
+        final LocalDate date = m_Date;
+        final boolean diff = m_Diff;
+
+        return new Task<>() {
+          @Override
+          protected BarResult call() throws Exception {
+            updateMessage("Building bar chart...");
+            updateProgress(-1, 1);
+
+            // Zwaar werk op de achtergrond; openTabsWindow() zelf
+            // (UI) gebeurt in setOnSucceeded.
+            bar.prepareTabs(tag, bars, date, diff);
+
+            if (isCancelled()) {
+              return null;
+            }
+
+            updateProgress(1, 1);
+            updateMessage("Done");
+            return new BarResult(bar, tag, bars, date, diff);
+          }
+        };
+      }
+    };
+  }
+
+  // ---------------- Service callbacks ----------------
+
+  private void wireLoadServiceCallbacks(Label l_tag, DatePicker datePicker) {
+    m_loadService.setOnSucceeded(e -> {
+      LoadResult r = m_loadService.getValue();
+      m_gnucashdbtables = r.db;
+      m_pieSelect = r.pie;
+      m_barwindow = r.bar;
+      m_pieData = r.data;
+
+      m_FileTagTxt = "";
+      if (m_pendingFiles != null) {
+        m_pendingFiles
+            .forEach(f -> m_FileTagTxt = m_FileTagTxt + " " + f.getName());
+        File[] l_fileArr = m_pendingFiles.toArray(new File[0]);
+        m_param.set_InputFiles(l_fileArr);
+        m_param.save();
+      }
+      m_statusLabel.setText(m_FileTagTxt);
+
+      Set<String> tags = m_pieData.getTags();
+      ObservableList<String> observableList = FXCollections
+          .observableArrayList(tags);
+      m_comboTagBox.setItems(observableList);
+
+      m_comboTagBox.setDisable(false);
+      datePicker.setDisable(false);
+      l_tag.setText(bundle.getMessage(MessageConstants.C_SelectedSubject, ""));
+
+      // Nieuwe data -> oude tag-keuze vervalt
+      m_tagSelected.set(false);
+    });
+
+    m_loadService.setOnFailed(e -> {
+      Throwable ex = m_loadService.getException();
+      lOGGER.log(Level.SEVERE, "Laden mislukt: " + ex, ex);
+      m_statusLabel
+          .setText("Fout: " + (ex != null ? ex.getMessage() : "onbekend"));
+    });
+
+    m_loadService.setOnCancelled(e -> {
+      lOGGER.log(Level.INFO, "Laden geannuleerd.");
+      m_statusLabel
+          .setText(bundle.getMessage(MessageConstants.C_ChooseGnuCashFile));
+    });
+  }
+
+  private void wirePieServiceCallbacks() {
+    m_pieService.setOnSucceeded(e -> {
+      PieResult r = m_pieService.getValue();
+      if (r == null) {
+        return;
+      }
+      m_pieData = r.data;
+      // setOnSucceeded draait op de FX-thread: venster openen mag hier
+      m_piwindow.openPieChartWindow(r.data, r.tag, r.colors, r.date);
+    });
+
+    m_pieService.setOnFailed(e -> {
+      Throwable ex = m_pieService.getException();
+      lOGGER.log(Level.SEVERE, "Pie-chart mislukt: " + ex, ex);
+    });
+
+    m_pieService.setOnCancelled(e -> {
+      lOGGER.log(Level.INFO, "Pie-chart geannuleerd.");
+    });
+  }
+
+  private void wireBarServiceCallbacks() {
+    m_barService.setOnSucceeded(e -> {
+      BarResult r = m_barService.getValue();
+      if (r == null) {
+        return;
+      }
+      // setOnSucceeded draait op de FX-thread: UI mag hier
+      m_barwindow.openTabsWindow(r.tag, r.bars, r.date, r.diff);
+    });
+
+    m_barService.setOnFailed(e -> {
+      Throwable ex = m_barService.getException();
+      lOGGER.log(Level.SEVERE, "Bar-chart mislukt: " + ex, ex);
+    });
+
+    m_barService.setOnCancelled(e -> {
+      lOGGER.log(Level.INFO, "Bar-chart geannuleerd.");
+    });
+  }
+
+  // ---------------- Houders ----------------
+
+  private static final class LoadResult {
+    final ReadGnuCashMultiDB db;
+    final ActionGnuCashDbPieChart pie;
+    final BarChartWithLegend bar;
+    final TaartPuntData data;
+
+    LoadResult(ReadGnuCashMultiDB db, ActionGnuCashDbPieChart pie,
+        BarChartWithLegend bar, TaartPuntData data) {
+      this.db = db;
+      this.pie = pie;
+      this.bar = bar;
+      this.data = data;
+    }
+  }
+
+  private static final class PieResult {
+    final TaartPuntData data;
+    final String tag;
+    final SubjectsColors colors;
+    final LocalDate date;
+
+    PieResult(TaartPuntData data, String tag, SubjectsColors colors,
+        LocalDate date) {
+      this.data = data;
+      this.tag = tag;
+      this.colors = colors;
+      this.date = date;
+    }
+  }
+
+  private static final class BarResult {
+    final BarChartWithLegend bar;
+    final String tag;
+    final int bars;
+    final LocalDate date;
+    final boolean diff;
+
+    BarResult(BarChartWithLegend bar, String tag, int bars, LocalDate date,
+        boolean diff) {
+      this.bar = bar;
+      this.tag = tag;
+      this.bars = bars;
+      this.date = date;
+      this.diff = diff;
+    }
+  }
+
+  // ---------------- Menu / helpers ----------------
+
   private int il = 0;
 
   private MenuBar doTheMenuBar(Stage primaryStage) {
     MenuBar menuBar = new MenuBar();
 
-    // Settings Menu
     Menu mnSettings = new Menu(bundle.getMessage(MessageConstants.C_Settings));
     mnSettings.setDisable(false);
 
-    // Loglevel:
     Menu mntmLoglevel = new Menu(
         bundle.getMessage(MessageConstants.C_Loglevel));
     ToggleGroup toggleGroup = new ToggleGroup();
@@ -374,7 +679,6 @@ public class MainMenu extends Application {
     });
     mnSettings.getItems().add(mntmLoglevel);
 
-    // Language
     ToggleGroup toggleLanguagesGroup = new ToggleGroup();
     Set<String> langs = bundle.getTranslations();
     Menu mntmLanguages = new Menu("Languages");
@@ -400,7 +704,6 @@ public class MainMenu extends Application {
     });
     mnSettings.getItems().add(mntmLanguages);
 
-    // Logfiles
     CheckMenuItem checkMenuItem = new CheckMenuItem("Logfiles");
     checkMenuItem.setOnAction(_ -> {
       DirectoryChooser directoryChooser = new DirectoryChooser();
@@ -427,7 +730,6 @@ public class MainMenu extends Application {
     });
     mnSettings.getItems().add(checkMenuItem);
 
-    // Stored preferences
     MenuItem menuPreferences = new MenuItem("Preferences");
     menuPreferences.setOnAction(_ -> {
       UserSetting showpref = new UserSetting();
@@ -435,7 +737,6 @@ public class MainMenu extends Application {
     });
     mnSettings.getItems().add(menuPreferences);
 
-    // Menu "?" and Help
     Menu questMenu = new Menu("?");
     MenuItem menuHelp = new MenuItem("Help");
     menuHelp.setOnAction(_ -> {
@@ -453,7 +754,6 @@ public class MainMenu extends Application {
     });
     questMenu.getItems().add(menuHelp);
 
-    // About
     MenuItem menuAbout = new MenuItem(
         bundle.getMessage(MessageConstants.C_About));
     menuAbout.setOnAction(_ -> {
@@ -463,26 +763,15 @@ public class MainMenu extends Application {
     });
     questMenu.getItems().add(menuAbout);
 
-    // MenuBar build up
     menuBar.getMenus().addAll(mnSettings, questMenu);
     return menuBar;
   }
 
-  /**
-   * Restart GUI for Language change purpose...
-   *
-   * @param primaryStage Stage
-   */
   private void restartGUI(Stage primaryStage) {
     primaryStage.close();
     start(new Stage());
   }
 
-  /**
-   * Main entry point.
-   *
-   * @param args Arguments
-   */
   public static void main(String[] args) {
     if (m_creationtime == null) {
       m_creationtime = JarInfo.getProjectVersion(Main.class);
