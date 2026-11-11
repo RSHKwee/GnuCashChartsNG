@@ -6,6 +6,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.logging.Logger;
 import java.util.Date;
+import java.util.function.DoubleConsumer;
 import java.util.logging.Level;
 
 import javafx.geometry.Insets;
@@ -47,28 +48,34 @@ public class BarChartWithLegend {
   private LocalDate m_preparedDate;
   private boolean m_preparedDiff;
   private Stage tabStage;
+  private DoubleConsumer m_progress = null;
 
   public BarChartWithLegend() {
     m_barchart = null;
   }
 
-  public BarChartWithLegend(ReadGnuCashDB inpFile) {
-    m_barchart = new ActionGnuCshDbStackedBarChart(inpFile);
+  public BarChartWithLegend(ReadGnuCashDB inpFile, DoubleConsumer progress) {
+    m_progress = progress;
+    m_barchart = new ActionGnuCshDbStackedBarChart(inpFile, progress);
   }
 
-  public BarChartWithLegend(ReadGnuCashMultiDB inpDBs) {
-    m_barchart = new ActionGnuCshDbStackedBarChart(inpDBs);
+  public BarChartWithLegend(ReadGnuCashMultiDB inpDBs,
+      DoubleConsumer progress) {
+    m_progress = progress;
+    m_barchart = new ActionGnuCshDbStackedBarChart(inpDBs, progress);
   }
 
   /**
    * Zwaar werk: data ophalen, chart-objecten opbouwen, CSV dumpen. GEEN
    * Stage/Scene/show(). Draait op een achtergrondthread.
+   *
+   * @param progress
    */
   public void prepareTabs(String tag, int a_NrBars, LocalDate a_Date,
-      boolean a_Diff) {
+      boolean a_Diff, DoubleConsumer progress) {
     // Data ophalen (traag)
     SamengesteldeStaafData a_barData = m_barchart.getData(a_NrBars, a_Date,
-        a_Diff);
+        a_Diff, progress);
 
     // Chart-objecten opbouwen (geen Scene, geen show)
     m_BarChartDiagram = new StackedBarChartScene(a_barData, tag);
@@ -98,7 +105,7 @@ public class BarChartWithLegend {
     // Vangnet: als prepareTabs() niet is aangeroepen, doe het alsnog
     // (bv. bij bestaande code die openTabsWindow direct aanroept).
     if (!m_prepared) {
-      prepareTabs(tag, a_NrBars, a_Date, a_Diff);
+      prepareTabs(tag, a_NrBars, a_Date, a_Diff, m_progress);
     }
 
     TabPane tabPane = new TabPane();

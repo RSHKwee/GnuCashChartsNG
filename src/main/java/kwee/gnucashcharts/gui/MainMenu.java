@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.DoubleConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -50,7 +51,6 @@ import kwee.gnucashcharts.main.UserSetting;
 import kwee.library.ApplicationMessages;
 import kwee.library.ChmOpener;
 import kwee.library.JarInfo;
-import kwee.library.TxtBestand;
 import kwee.library.FX.AboutWindow;
 import kwee.library.FX.JavaFXLogHandler;
 import kwee.gnucashcharts.library.MessageConstants;
@@ -102,20 +102,18 @@ public class MainMenu extends Application {
 
   private List<File> m_pendingFiles;
 
-  // --- UI-velden die we in callbacks / bindings nodig hebben ---
-  private Label m_statusLabel;
+  // --- UI-velden ---
   private Label m_fileLabel;
+  private Label m_statusLabel;
   private Button m_openFileButton;
   private Button m_cancelLoadButton;
   private ComboBox<String> m_comboTagBox;
   private Button m_buttonPiechart;
   private Button m_buttonBarchart;
   private TextField m_integerField;
-
   private ProgressBar m_progressBar;
   private PieChartWithLegend m_piwindow;
 
-  // Houdt bij of er een tag gekozen is (voor de bindings)
   private final BooleanProperty m_tagSelected = new SimpleBooleanProperty(
       false);
 
@@ -174,20 +172,19 @@ public class MainMenu extends Application {
     m_fileLabel = new Label(
         bundle.getMessage(MessageConstants.C_ChooseGnuCashFile));
     m_statusLabel = new Label();
-
     Label l_tag = new Label(
         bundle.getMessage(MessageConstants.C_SelectSubject));
 
     m_openFileButton = new Button(
         bundle.getMessage(MessageConstants.C_OpenFile));
-    m_cancelLoadButton = new Button("Cancel");
+    m_cancelLoadButton = new Button();
 
     m_piwindow = new PieChartWithLegend();
 
     m_progressBar = new ProgressBar();
     m_progressBar.setMaxWidth(Double.MAX_VALUE);
 
-    // --- Services aanmaken ---
+    // --- Services ---
     m_loadService = createLoadService();
     m_pieService = createPieService();
     m_barService = createBarService();
@@ -195,30 +192,36 @@ public class MainMenu extends Application {
     wireLoadServiceCallbacks(l_tag, datePicker);
     wirePieServiceCallbacks();
     wireBarServiceCallbacks();
+    wireServiceMessages();
 
-    // --- Bindings ---
-    // Open-knop uit als er iets draait
+    // --- Bindings: knoppen ---
     m_openFileButton.disableProperty().bind(m_loadService.runningProperty()
         .or(m_pieService.runningProperty()).or(m_barService.runningProperty()));
 
-    // Cancel alleen aan als een load draait
-    m_cancelLoadButton.disableProperty()
-        .bind(m_loadService.runningProperty().or(m_pieService.runningProperty())
-            .or(m_barService.runningProperty()).not());
-
-    // Pie-knop: aan als tag gekozen EN niets draait
     m_buttonPiechart.disableProperty()
         .bind(m_tagSelected.not().or(m_pieService.runningProperty())
             .or(m_barService.runningProperty())
             .or(m_loadService.runningProperty()));
 
-    // Bar-knop: idem
     m_buttonBarchart.disableProperty()
         .bind(m_tagSelected.not().or(m_barService.runningProperty())
             .or(m_pieService.runningProperty())
             .or(m_loadService.runningProperty()));
 
-    // Voortgangsbalk volgt welke service dan ook draait
+    // Cancel-knop: actief zolang een van de drie taken draait
+    m_cancelLoadButton.disableProperty()
+        .bind(m_loadService.runningProperty().or(m_pieService.runningProperty())
+            .or(m_barService.runningProperty()).not());
+
+    // Dynamische knoptekst
+    m_cancelLoadButton.textProperty()
+        .bind(Bindings.when(m_loadService.runningProperty()).then("Cancel load")
+            .otherwise(Bindings.when(m_pieService.runningProperty())
+                .then("Cancel pie chart")
+                .otherwise(Bindings.when(m_barService.runningProperty())
+                    .then("Cancel bar chart").otherwise("Cancel"))));
+
+    // Voortgangsbalk volgt de actieve service
     m_progressBar.progressProperty()
         .bind(Bindings.when(m_loadService.runningProperty())
             .then(m_loadService.progressProperty())
@@ -229,6 +232,7 @@ public class MainMenu extends Application {
 
     // --- Handlers ---
     m_openFileButton.setOnAction(_ -> {
+      m_statusLabel.setText("");
       if (m_param.get_InputFiles() != null
           && m_param.get_InputFiles().length > 0) {
         String ldir = m_param.get_InputFiles()[0].getParent();
@@ -264,11 +268,11 @@ public class MainMenu extends Application {
       if (m_loadService.isRunning()) {
         m_loadService.cancel();
       }
-      m_statusLabel.textProperty().bind(m_loadService.messageProperty());
       m_loadService.restart();
     });
 
     m_cancelLoadButton.setOnAction(_ -> {
+      m_statusLabel.setText("");
       if (m_loadService.isRunning()) {
         m_loadService.cancel();
       }
@@ -281,6 +285,7 @@ public class MainMenu extends Application {
     });
 
     m_comboTagBox.setOnAction(_ -> {
+      m_statusLabel.setText("");
       String selectedOption = m_comboTagBox.getValue();
       if (selectedOption != null) {
         lOGGER.log(Level.INFO, bundle
@@ -290,28 +295,24 @@ public class MainMenu extends Application {
         m_param.set_Tag(m_tag);
         m_param.save();
 
-        // m_buttonPiechart / m_buttonBarchart NIET meer setDisable(false):
-        // die zijn gebonden aan m_tagSelected + runningProperty().
-        m_integerField.setDisable(false); // deze is niet gebonden
-        m_tagSelected.set(true); // activeert de pie/bar-knoppen
+        m_integerField.setDisable(false);
+        m_tagSelected.set(true);
 
         ArrayList<String> l_Subjects = m_pieData.getSubjects(m_tag);
         m_SubjColors = new SubjectsColors(l_Subjects);
       }
     });
 
-    // --- Pie-knop ---
     m_buttonPiechart.setOnAction(_ -> {
-      if (m_pieService.isRunning()) {
-        return;
+      if (!m_pieService.isRunning()) {
+        m_pieService.restart();
       }
-      m_statusLabel.textProperty().bind(m_loadService.messageProperty());
-      m_pieService.restart();
     });
 
     Label nrBarsLabel = new Label(
         bundle.getMessage(MessageConstants.C_MonthLab));
     m_integerField.focusedProperty().addListener((_, _, isNowFocused) -> {
+      m_statusLabel.setText("");
       if (!isNowFocused) {
         try {
           int value = Integer.parseInt(m_integerField.getText());
@@ -337,6 +338,7 @@ public class MainMenu extends Application {
     });
 
     checkDiff.setOnAction(_ -> {
+      m_statusLabel.setText("");
       if (checkDiff.isSelected()) {
         m_Diff = true;
         checkDiff.setText(bundle.getMessage(MessageConstants.C_DiffMode));
@@ -346,13 +348,11 @@ public class MainMenu extends Application {
       }
     });
 
-    // --- Bar-knop ---
     m_buttonBarchart.setOnAction(_ -> {
-      if (m_barService.isRunning()) {
-        return;
+      m_statusLabel.setText("");
+      if (!m_barService.isRunning()) {
+        m_barService.restart();
       }
-      m_statusLabel.textProperty().bind(m_loadService.messageProperty());
-      m_barService.restart();
     });
 
     // Layout
@@ -410,9 +410,13 @@ public class MainMenu extends Application {
         return new Task<>() {
           @Override
           protected LoadResult call() throws Exception {
+            // Callback: de routines roepen dit aan met een fractie 0..1
+            DoubleConsumer progress = f -> updateProgress(f, 1.0);
+
             updateMessage("Reading GnuCash DB...");
             updateProgress(-1, 1);
-            ReadGnuCashMultiDB db = new ReadGnuCashMultiDB(files);
+            // Routine geeft voortgang door via de callback:
+            ReadGnuCashMultiDB db = new ReadGnuCashMultiDB(files, progress);
             if (isCancelled()) {
               return null;
             }
@@ -424,19 +428,19 @@ public class MainMenu extends Application {
             }
 
             updateMessage("Building bar chart model...");
-            BarChartWithLegend bar = new BarChartWithLegend(db);
+            BarChartWithLegend bar = new BarChartWithLegend(db, progress);
             if (isCancelled()) {
               return null;
             }
 
-            updateMessage("Calculating data...");
-            TaartPuntData data = pie.getData(m_Date);
+            updateMessage("Calculating initial pie data...");
+            TaartPuntData data = pie.getData(m_Date, progress);
             if (isCancelled()) {
               return null;
             }
 
             updateProgress(1, 1);
-            updateMessage("");
+            updateMessage("Done");
             return new LoadResult(db, pie, bar, data);
           }
         };
@@ -456,16 +460,18 @@ public class MainMenu extends Application {
         return new Task<>() {
           @Override
           protected PieResult call() throws Exception {
+            DoubleConsumer progress = f -> updateProgress(f, 1.0);
+
             updateMessage("Calculating pie data...");
             updateProgress(-1, 1);
-
-            TaartPuntData data = pie.getData(date);
+            TaartPuntData data = pie.getData(date, progress);
             if (isCancelled()) {
               return null;
             }
 
             updateMessage("Writing CSV...");
-            TxtBestand.DumpBestand("PieDataNG.csv", data.print());
+            progress.accept(0.95);
+            kwee.library.TxtBestand.DumpBestand("PieDataNG.csv", data.print());
             if (isCancelled()) {
               return null;
             }
@@ -492,13 +498,11 @@ public class MainMenu extends Application {
         return new Task<>() {
           @Override
           protected BarResult call() throws Exception {
+            DoubleConsumer progress = f -> updateProgress(f, 1.0);
+
             updateMessage("Building bar chart...");
             updateProgress(-1, 1);
-
-            // Zwaar werk op de achtergrond; openTabsWindow() zelf
-            // (UI) gebeurt in setOnSucceeded.
-            bar.prepareTabs(tag, bars, date, diff);
-
+            bar.prepareTabs(tag, bars, date, diff, progress);
             if (isCancelled()) {
               return null;
             }
@@ -512,7 +516,7 @@ public class MainMenu extends Application {
     };
   }
 
-  // ---------------- Service callbacks ----------------
+  // ---------------- Callbacks ----------------
 
   private void wireLoadServiceCallbacks(Label l_tag, DatePicker datePicker) {
     m_loadService.setOnSucceeded(e -> {
@@ -541,21 +545,21 @@ public class MainMenu extends Application {
       datePicker.setDisable(false);
       l_tag.setText(bundle.getMessage(MessageConstants.C_SelectedSubject, ""));
 
-      // Nieuwe data -> oude tag-keuze vervalt
       m_tagSelected.set(false);
     });
 
     m_loadService.setOnFailed(e -> {
       Throwable ex = m_loadService.getException();
       lOGGER.log(Level.SEVERE, "Laden mislukt: " + ex, ex);
-      m_fileLabel
+      m_statusLabel
           .setText("Fout: " + (ex != null ? ex.getMessage() : "onbekend"));
     });
 
     m_loadService.setOnCancelled(e -> {
       lOGGER.log(Level.INFO, "Laden geannuleerd.");
-      m_fileLabel
+      m_statusLabel
           .setText(bundle.getMessage(MessageConstants.C_ChooseGnuCashFile));
+      m_tagSelected.set(false);
     });
   }
 
@@ -566,17 +570,17 @@ public class MainMenu extends Application {
         return;
       }
       m_pieData = r.data;
-      // setOnSucceeded draait op de FX-thread: venster openen mag hier
+      m_statusLabel.setText("Pie chart klaar.");
       m_piwindow.openPieChartWindow(r.data, r.tag, r.colors, r.date);
     });
-
     m_pieService.setOnFailed(e -> {
       Throwable ex = m_pieService.getException();
       lOGGER.log(Level.SEVERE, "Pie-chart mislukt: " + ex, ex);
+      m_statusLabel.setText("Pie-chart fout: " + ex.getMessage());
     });
-
     m_pieService.setOnCancelled(e -> {
       lOGGER.log(Level.INFO, "Pie-chart geannuleerd.");
+      m_statusLabel.setText("Pie-chart geannuleerd.");
     });
   }
 
@@ -586,17 +590,38 @@ public class MainMenu extends Application {
       if (r == null) {
         return;
       }
-      // setOnSucceeded draait op de FX-thread: UI mag hier
+      m_statusLabel.setText("Bar chart klaar.");
       m_barwindow.openTabsWindow(r.tag, r.bars, r.date, r.diff);
     });
-
     m_barService.setOnFailed(e -> {
       Throwable ex = m_barService.getException();
       lOGGER.log(Level.SEVERE, "Bar-chart mislukt: " + ex, ex);
+      m_statusLabel.setText("Bar-chart fout: " + ex.getMessage());
     });
-
     m_barService.setOnCancelled(e -> {
       lOGGER.log(Level.INFO, "Bar-chart geannuleerd.");
+      m_statusLabel.setText("Bar-chart geannuleerd.");
+    });
+  }
+
+  /**
+   * Koppelt de messageProperty van alle drie de services aan het statuslabel.
+   */
+  private void wireServiceMessages() {
+    m_loadService.messageProperty().addListener((obs, oud, nieuw) -> {
+      if (nieuw != null && m_loadService.isRunning()) {
+        m_statusLabel.setText("[load] " + nieuw);
+      }
+    });
+    m_pieService.messageProperty().addListener((obs, oud, nieuw) -> {
+      if (nieuw != null && m_pieService.isRunning()) {
+        m_statusLabel.setText("[pie] " + nieuw);
+      }
+    });
+    m_barService.messageProperty().addListener((obs, oud, nieuw) -> {
+      if (nieuw != null && m_barService.isRunning()) {
+        m_statusLabel.setText("[bar] " + nieuw);
+      }
     });
   }
 
@@ -655,7 +680,6 @@ public class MainMenu extends Application {
 
   private MenuBar doTheMenuBar(Stage primaryStage) {
     MenuBar menuBar = new MenuBar();
-
     Menu mnSettings = new Menu(bundle.getMessage(MessageConstants.C_Settings));
     mnSettings.setDisable(false);
 
@@ -717,7 +741,6 @@ public class MainMenu extends Application {
       DirectoryChooser directoryChooser = new DirectoryChooser();
       directoryChooser.setTitle("Output Directory");
       File selectedDirectory = directoryChooser.showDialog(primaryStage);
-
       if (selectedDirectory != null) {
         lOGGER.log(Level.INFO, bundle.getMessage(MessageConstants.C_LogFolder,
             selectedDirectory.getAbsolutePath()));

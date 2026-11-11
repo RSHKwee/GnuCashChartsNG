@@ -3,6 +3,7 @@ package kwee.gnucashcharts.gui;
 import java.io.File;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.function.DoubleConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,20 +26,22 @@ public class ActionGnuCshDbStackedBarChart {
   private ReadGnuCashMultiDB m_gnucashdbtables;
 
   /**
-   * 
+   *
    * @param a_SelectedFile GnuCash file
    */
-  public ActionGnuCshDbStackedBarChart(ReadGnuCashDB a_SelectedDB) {
+  public ActionGnuCshDbStackedBarChart(ReadGnuCashDB a_SelectedDB,
+      DoubleConsumer progress) {
     m_SelectedFiles = a_SelectedDB.getFile().getName();
     File[] l_files = new File[0];
     l_files[0] = a_SelectedDB.getFile();
     MainMenu.m_param.set_InputFiles(l_files);
     MainMenu.m_param.save();
 
-    m_gnucashdbtables.addGnuCashDB(a_SelectedDB);
+    m_gnucashdbtables.addGnuCashDB(a_SelectedDB, progress);
   }
 
-  public ActionGnuCshDbStackedBarChart(ReadGnuCashMultiDB a_SelectedDBs) {
+  public ActionGnuCshDbStackedBarChart(ReadGnuCashMultiDB a_SelectedDBs,
+      DoubleConsumer progress) {
     File[] l_files = a_SelectedDBs.getFiles().toArray(new File[0]);
     m_SelectedFiles = "";
     a_SelectedDBs.getFiles().forEach(ll_file -> {
@@ -47,12 +50,14 @@ public class ActionGnuCshDbStackedBarChart {
     MainMenu.m_param.set_InputFiles(l_files);
     MainMenu.m_param.save();
 
-    m_gnucashdbtables = new ReadGnuCashMultiDB(a_SelectedDBs);
+    m_gnucashdbtables = new ReadGnuCashMultiDB(a_SelectedDBs, progress);
   }
 
-  public SamengesteldeStaafData getData(int a_nrBars, LocalDate a_Date, boolean a_delta) {
+  public SamengesteldeStaafData getData(int a_nrBars, LocalDate a_Date,
+      boolean a_delta, DoubleConsumer progress) {
     lOGGER.log(Level.INFO,
-        bundle.getMessage(MessageConstants.C_BarChartSelections, m_SelectedFiles, Integer.toString(a_nrBars)));
+        bundle.getMessage(MessageConstants.C_BarChartSelections,
+            m_SelectedFiles, Integer.toString(a_nrBars)));
     try {
       m_NrBars = a_nrBars;
       MainMenu.m_param.save();
@@ -70,6 +75,11 @@ public class ActionGnuCshDbStackedBarChart {
         month = l_result1[1];
         l_Date = LocalDate.of(year, month, day);
         addData(l_Date);
+        if (progress != null) {
+          if (i > 0) {
+            progress.accept((double) i / m_NrBars);
+          }
+        }
       }
     } catch (Exception e) {
       lOGGER.log(Level.INFO, e.getMessage());
@@ -100,4 +110,5 @@ public class ActionGnuCshDbStackedBarChart {
     int[] l_result = { l_year, l_month };
     return l_result;
   }
+
 }
