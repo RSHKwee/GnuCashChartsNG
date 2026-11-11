@@ -46,6 +46,7 @@ public class BarChartWithLegend {
   private int m_preparedNrBars;
   private LocalDate m_preparedDate;
   private boolean m_preparedDiff;
+  private Stage tabStage;
 
   public BarChartWithLegend() {
     m_barchart = null;
@@ -106,7 +107,7 @@ public class BarChartWithLegend {
     Tab tabTransposedTable = new Tab(
         bundle.getMessage(MessageConstants.C_TableTransposed));
 
-    Stage tabStage = new Stage();
+    tabStage = new Stage();
     tabStage.setTitle(title);
 
     VBox tabDiagramSave = new VBox(m_BarChartDiagram.getVBox(),
@@ -153,7 +154,7 @@ public class BarChartWithLegend {
         String ldir = intFile.getParent();
         fileChooser.setInitialDirectory(new File(ldir));
       }
-      File selectedFile = fileChooser.showSaveDialog(a_Stage);
+      File selectedFile = fileChooser.showSaveDialog(tabStage);
       if (selectedFile != null) {
         CreatePdf l_Pdf = new CreatePdf(selectedFile.getAbsolutePath());
         try {

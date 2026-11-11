@@ -111,6 +111,7 @@ public class MainMenu extends Application {
   private Button m_buttonPiechart;
   private Button m_buttonBarchart;
   private TextField m_integerField;
+
   private ProgressBar m_progressBar;
   private PieChartWithLegend m_piwindow;
 
@@ -355,13 +356,13 @@ public class MainMenu extends Application {
     });
 
     // Layout
-    HBox openFileLayout = new HBox(m_openFileButton, m_cancelLoadButton,
-        m_fileLabel, m_statusLabel);
+    HBox openFileLayout = new HBox(m_openFileButton, m_fileLabel,
+        m_statusLabel);
     HBox selectOptionLayout = new HBox(endDateLabel, datePicker, m_comboTagBox,
         l_tag);
     HBox buttonPiechartLayout = new HBox(m_buttonPiechart);
     HBox buttonBarchartLayout = new HBox(nrBarsLabel, m_integerField, checkDiff,
-        m_buttonBarchart);
+        m_buttonBarchart, m_cancelLoadButton);
 
     openFileLayout.setSpacing(10);
     selectOptionLayout.setSpacing(10);
@@ -369,7 +370,6 @@ public class MainMenu extends Application {
     buttonBarchartLayout.setSpacing(10);
 
     HBox.setMargin(m_openFileButton, new Insets(10, 10, 10, 10));
-    HBox.setMargin(m_cancelLoadButton, new Insets(10, 10, 10, 10));
     HBox.setMargin(m_fileLabel, new Insets(10, 10, 10, 10));
     HBox.setMargin(m_statusLabel, new Insets(10, 10, 10, 10));
     HBox.setMargin(m_comboTagBox, new Insets(10, 10, 10, 10));
@@ -381,6 +381,7 @@ public class MainMenu extends Application {
     HBox.setMargin(m_integerField, new Insets(10, 10, 10, 10));
     HBox.setMargin(endDateLabel, new Insets(10, 10, 10, 10));
     HBox.setMargin(datePicker, new Insets(10, 10, 10, 10));
+    HBox.setMargin(m_cancelLoadButton, new Insets(10, 10, 10, 10));
 
     VBox layout = new VBox(openFileLayout, selectOptionLayout,
         buttonPiechartLayout, buttonBarchartLayout, m_progressBar, logTextArea);
@@ -547,13 +548,13 @@ public class MainMenu extends Application {
     m_loadService.setOnFailed(e -> {
       Throwable ex = m_loadService.getException();
       lOGGER.log(Level.SEVERE, "Laden mislukt: " + ex, ex);
-      m_statusLabel
+      m_fileLabel
           .setText("Fout: " + (ex != null ? ex.getMessage() : "onbekend"));
     });
 
     m_loadService.setOnCancelled(e -> {
       lOGGER.log(Level.INFO, "Laden geannuleerd.");
-      m_statusLabel
+      m_fileLabel
           .setText(bundle.getMessage(MessageConstants.C_ChooseGnuCashFile));
     });
   }
